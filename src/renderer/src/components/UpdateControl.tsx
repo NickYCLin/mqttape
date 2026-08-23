@@ -3,7 +3,7 @@ import type { AppUpdateStatus } from '../../../shared/contracts'
 import { useI18n } from '../i18n'
 import { DownloadIcon, RefreshIcon } from './icons'
 
-const RELEASES_URL = 'https://github.com/NickYCLin/MQTTape/releases/latest'
+const RELEASES_URL = 'https://github.com/NickYCLin/mqttape/releases/latest'
 
 export function UpdateControl() {
   const { t } = useI18n()

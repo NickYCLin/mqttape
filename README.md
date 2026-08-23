@@ -66,7 +66,7 @@ MQTTape 是一套可在桌面與瀏覽器使用的開源 MQTT 除錯工具。它
 
 MQTT over TCP 通常使用登記連接埠 `1883`，MQTT over TLS 通常使用 `8883`。`8083` 與 `8084` 則是部分 Broker 分別提供 `ws://` 與 `wss://` MQTT Endpoint 時採用的常見預設，並非 MQTT 強制規定；Mosquitto 等部署也常使用其他連接埠。MQTTape 切換通訊協定時填入的 Port 只是起始建議值，請一律以 Broker 管理者提供的 Host、Port 與 WebSocket Path 為準。
 
-Web Lite 發布於 <https://nickyclin.github.io/MQTTape/>。由於 GitHub Pages 使用 HTTPS，遠端 Broker 通常必須提供具有受信任憑證的 `wss://` Endpoint；瀏覽器會阻擋 HTTPS 頁面連線至不安全的 `ws://`。
+Web Lite 發布於 <https://nickyclin.github.io/mqttape/>。由於 GitHub Pages 使用 HTTPS，遠端 Broker 通常必須提供具有受信任憑證的 `wss://` Endpoint；瀏覽器會阻擋 HTTPS 頁面連線至不安全的 `ws://`。
 
 ## 多 Broker 工作階段
 
@@ -115,7 +115,7 @@ ChirpStack:      application/<application-id>/device/+/event/+
 
 ## 📥 下載與安裝 (Downloads)
 
-你可以直接前往 [GitHub Releases](https://github.com/NickYCLin/MQTTape/releases/latest) 取得最新發行版本的安裝檔、可攜式執行檔與 Checksum Manifest：
+你可以直接前往 [GitHub Releases](https://github.com/NickYCLin/mqttape/releases/latest) 取得最新發行版本的安裝檔、可攜式執行檔與 Checksum Manifest：
 
 | 平台 | 支援架構 | 安裝包格式 | 更新機制 |
 |---|---|---|---|
@@ -125,10 +125,10 @@ ChirpStack:      application/<application-id>/device/+/event/+
 | **macOS** | Intel x64 | DMG 映像檔 (`.dmg`) / ZIP 壓縮檔 | ⚪ 手動下載更新 |
 | **Linux** | x64 (AMD64) | AppImage / Debian 套件 (`.deb`) | 🟢 支援背景自動更新 |
 | **Linux** | ARM64 (aarch64) | AppImage / Debian 套件 (`.deb`) | ⚪ 手動下載更新 |
-| **Web Lite** | 跨平台瀏覽器 | 靜態 Web 應用 ([線上使用](https://nickyclin.github.io/MQTTape/)) | 🟢 瀏覽器即時載入最新版 |
+| **Web Lite** | 跨平台瀏覽器 | 靜態 Web 應用 ([線上使用](https://nickyclin.github.io/mqttape/)) | 🟢 瀏覽器即時載入最新版 |
 
 > [!TIP]
-> 歡迎至 [Releases 列表](https://github.com/NickYCLin/MQTTape/releases) 下載各平台安裝檔或檢視 [更新日誌 (Changelog)](CHANGELOG.md)。
+> 歡迎至 [Releases 列表](https://github.com/NickYCLin/mqttape/releases) 下載各平台安裝檔或檢視 [更新日誌 (Changelog)](CHANGELOG.md)。
 > 維護者可參考 [Release 自動化與版本規則](docs/RELEASE_AUTOMATION.zh-TW.md)；依 SemVer 與 Conventional Commits 準備版本並建立 Tag 後，系統會自動打包發布。
 
 ## 程式碼簽章政策

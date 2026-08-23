@@ -137,7 +137,7 @@ jobs:
           | **macOS** | Intel x64 | DMG 映像檔 (`.dmg`) / ZIP 壓縮檔 | ⚪ 手動下載更新 |
           | **Linux** | x64 (AMD64) | AppImage / Debian 套件 (`.deb`) | 🟢 支援背景自動更新 |
           | **Linux** | ARM64 | AppImage / Debian 套件 (`.deb`) | ⚪ 手動下載更新 |
-          | **Web Lite** | 瀏覽器 | [線上即開即用](https://nickyclin.github.io/MQTTape/) | 🟢 瀏覽器載入已部署版本 |
+          | **Web Lite** | 瀏覽器 | [線上即開即用](https://nickyclin.github.io/mqttape/) | 🟢 瀏覽器載入已部署版本 |
 
           ## 🛡️ 完整性與簽章狀態
 
@@ -145,7 +145,7 @@ jobs:
           - Linux／macOS：`sha256sum <檔案名稱>`
           - Windows PowerShell：`Get-FileHash <檔案名稱> -Algorithm SHA256`
           - 在 SignPath 申請核准並完成簽章流程接線前，Windows 套件維持未簽章；macOS 套件目前也尚未加入 Apple Developer ID 簽名與公證。
-          - 詳細狀態請參閱 [SignPath 啟用手冊](https://github.com/NickYCLin/MQTTape/blob/main/docs/SIGNPATH.md) 與 [Release 自動化與版本規則](https://github.com/NickYCLin/MQTTape/blob/main/docs/RELEASE_AUTOMATION.zh-TW.md)。
+          - 詳細狀態請參閱 [SignPath 啟用手冊](https://github.com/NickYCLin/mqttape/blob/main/docs/SIGNPATH.md) 與 [Release 自動化與版本規則](https://github.com/NickYCLin/mqttape/blob/main/docs/RELEASE_AUTOMATION.zh-TW.md)。
           EOF
       - name: Create GitHub Release
         env:

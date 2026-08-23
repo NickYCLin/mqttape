@@ -13,7 +13,7 @@
 
 ---
 
-## [0.12.0](https://github.com/NickYCLin/MQTTape/compare/v0.11.0...v0.12.0) (2026-08-21)
+## [0.12.0](https://github.com/NickYCLin/mqttape/compare/v0.11.0...v0.12.0) (2026-08-21)
 
 ### 🚀 新增功能
 * **跨平台原生 x64 與 ARM64 封裝發布**：
@@ -67,7 +67,7 @@
 
 ---
 
-## [0.11.0](https://github.com/NickYCLin/MQTTape/compare/v0.10.0...v0.11.0) (2026-08-17)
+## [0.11.0](https://github.com/NickYCLin/mqttape/compare/v0.10.0...v0.11.0) (2026-08-17)
 
 ### 🚀 新增功能
 * **全新外觀色彩主題系統**：
@@ -91,7 +91,7 @@
 
 ---
 
-## [0.10.0](https://github.com/NickYCLin/MQTTape/compare/v0.9.0...v0.10.0) (2026-08-17)
+## [0.10.0](https://github.com/NickYCLin/mqttape/compare/v0.9.0...v0.10.0) (2026-08-17)
 
 ### 🚀 新增功能
 * **引導式 LoRaWAN Downlink 建立器**：
@@ -101,7 +101,7 @@
 
 ---
 
-## [0.9.0](https://github.com/NickYCLin/MQTTape/compare/v0.8.0...v0.9.0) (2026-08-17)
+## [0.9.0](https://github.com/NickYCLin/mqttape/compare/v0.8.0...v0.9.0) (2026-08-17)
 
 ### 🚀 新增功能
 * **自動 LoRaWAN Uplink 辨識**：
@@ -111,7 +111,7 @@
 
 ---
 
-## [0.8.0](https://github.com/NickYCLin/MQTTape/compare/v0.7.0...v0.8.0) (2026-08-17)
+## [0.8.0](https://github.com/NickYCLin/mqttape/compare/v0.7.0...v0.8.0) (2026-08-17)
 
 ### 🚀 新增功能
 * **桌面版背景自動更新機制**：
@@ -120,7 +120,7 @@
 
 ---
 
-## [0.7.0](https://github.com/NickYCLin/MQTTape/compare/v0.6.0...v0.7.0) (2026-08-17)
+## [0.7.0](https://github.com/NickYCLin/mqttape/compare/v0.6.0...v0.7.0) (2026-08-17)
 
 ### 🚀 新增功能
 * **繁體中文與英文多語系即時切換**：
@@ -128,7 +128,7 @@
 
 ---
 
-## [0.6.0](https://github.com/NickYCLin/MQTTape/compare/v0.5.0...v0.6.0) (2026-08-17)
+## [0.6.0](https://github.com/NickYCLin/mqttape/compare/v0.5.0...v0.6.0) (2026-08-17)
 
 ### 🚀 新增功能
 * **可重複使用的重播預設設定**：
@@ -136,7 +136,7 @@
 
 ---
 
-## [0.5.0](https://github.com/NickYCLin/MQTTape/compare/v0.4.0...v0.5.0) (2026-08-17)
+## [0.5.0](https://github.com/NickYCLin/mqttape/compare/v0.4.0...v0.5.0) (2026-08-17)
 
 ### 🚀 新增功能
 * **彈性擷取裁切與匯出預覽**：
@@ -151,7 +151,7 @@
 
 ---
 
-## [0.4.0](https://github.com/NickYCLin/MQTTape/compare/v0.3.0...v0.4.0) (2026-08-15)
+## [0.4.0](https://github.com/NickYCLin/mqttape/compare/v0.3.0...v0.4.0) (2026-08-15)
 
 ### 🚀 新增功能
 * **Payload 智慧型別判定**：
@@ -168,7 +168,7 @@
 
 ---
 
-## [0.3.0](https://github.com/NickYCLin/MQTTape/compare/v0.2.0...v0.3.0) (2026-08-14)
+## [0.3.0](https://github.com/NickYCLin/mqttape/compare/v0.2.0...v0.3.0) (2026-08-14)
 
 ### 🚀 新增功能
 * **工作階段 Topic 樹狀資源瀏覽器**：
@@ -186,7 +186,7 @@
 
 ---
 
-## [0.2.0](https://github.com/NickYCLin/MQTTape/compare/v0.1.0...v0.2.0) (2026-08-14)
+## [0.2.0](https://github.com/NickYCLin/mqttape/compare/v0.1.0...v0.2.0) (2026-08-14)
 
 ### 🚀 新增功能
 * **擷取預覽與重播控制**：
@@ -210,7 +210,7 @@
 
 ---
 
-## [0.1.0](https://github.com/NickYCLin/MQTTape/releases/tag/v0.1.0) (2026-08-14)
+## [0.1.0](https://github.com/NickYCLin/mqttape/releases/tag/v0.1.0) (2026-08-14)
 
 ### 🚀 新增功能
 * **初始版本發布**：

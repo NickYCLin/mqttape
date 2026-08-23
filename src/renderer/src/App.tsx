@@ -544,7 +544,7 @@ export default function App() {
           </label>
           <a
             className="btn ghost icon"
-            href="https://github.com/NickYCLin/MQTTape"
+            href="https://github.com/NickYCLin/mqttape"
             target="_blank"
             rel="noreferrer"
             title={t('app.github')}

@@ -51,4 +51,4 @@ operating system, local application data may need to be removed separately.
 
 Material changes to this policy will be published in the source repository. For
 questions, open an issue in the
-[MQTTape repository](https://github.com/NickYCLin/MQTTape/issues).
+[MQTTape repository](https://github.com/NickYCLin/mqttape/issues).

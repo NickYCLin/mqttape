@@ -55,7 +55,7 @@ flowchart TD
    - `ubuntu-24.04-arm` (Linux ARM64): 產出原生 ARM64 AppImage 與 deb 封裝。
 5. **產生 Checksums 雜湊**：自動計算所有發布資產的 SHA-256 雜湊值並輸出 `SHA256SUMS.txt`。
 6. **建立 GitHub Release**：從 `CHANGELOG.md` 擷取 Tag 對應版本，將 `###` 標題轉為與 LatticeTerm 相同的 `## 🚀`／`## 🛠️` Release 版型，以第一個粗體重點產生描述型標題，再附上平台與簽章狀態後發布。
-7. **Web Lite 獨立部署**：`pages.yml` 不由 Release Tag 觸發；當 Web Lite 相關路徑合併至 `main` 時，才會獨立部署至 [GitHub Pages](https://nickyclin.github.io/MQTTape/)。
+7. **Web Lite 獨立部署**：`pages.yml` 不由 Release Tag 觸發；當 Web Lite 相關路徑合併至 `main` 時，才會獨立部署至 [GitHub Pages](https://nickyclin.github.io/mqttape/)。
 
 ---
 
@@ -73,7 +73,7 @@ MQTTape 為三大作業系統與兩大主流 CPU 架構提供原生編譯的二�
 | **macOS** | Intel x64 | DMG 映像檔 (`.dmg`) / ZIP | `MQTTape-<version>-mac-x64.dmg` | ⚪ 手動下載更新 |
 | **Linux** | x64 (AMD64) | AppImage / Debian 套件 (`.deb`) | `MQTTape-<version>-linux-x86_64.AppImage` / `MQTTape-<version>-linux-amd64.deb` | 🟢 支援背景自動更新 |
 | **Linux** | ARM64 (aarch64) | AppImage / Debian 套件 (`.deb`) | `MQTTape-<version>-linux-arm64.AppImage` | ⚪ 手動下載更新 |
-| **Web Lite** | 跨平台網頁 | 靜態 Web 應用 | [線上即開即用](https://nickyclin.github.io/MQTTape/) | 🟢 瀏覽器即時載入最新版 |
+| **Web Lite** | 跨平台網頁 | 靜態 Web 應用 | [線上即開即用](https://nickyclin.github.io/mqttape/) | 🟢 瀏覽器即時載入最新版 |
 
 ---
 
