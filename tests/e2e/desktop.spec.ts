@@ -6,19 +6,27 @@ import { _electron as electron, expect, test } from '@playwright/test'
 
 const require = createRequire(import.meta.url)
 const electronPath = require('electron') as string
+const packagedExecutable = process.env.MQTTAPE_E2E_EXECUTABLE
 
 test('desktop shell starts with the restricted preload bridge', async () => {
+  test.setTimeout(60_000)
   const userDataDirectory = await mkdtemp(join(tmpdir(), 'mqttape-e2e-'))
   let application: Awaited<ReturnType<typeof electron.launch>> | undefined
 
   try {
     application = await electron.launch({
-      executablePath: electronPath,
-      args: ['.', `--user-data-dir=${userDataDirectory}`],
+      executablePath: packagedExecutable || electronPath,
+      args: [
+        ...(packagedExecutable ? [] : ['.']),
+        `--user-data-dir=${userDataDirectory}`
+      ],
       cwd: process.cwd(),
       env: {
         ...process.env,
-        ELECTRON_DISABLE_SECURITY_WARNINGS: 'true'
+        ELECTRON_DISABLE_SECURITY_WARNINGS: 'true',
+        ...(packagedExecutable && process.platform === 'win32'
+          ? { PORTABLE_EXECUTABLE_DIR: userDataDirectory }
+          : {})
       }
     })
     const window = await application.firstWindow()
@@ -48,7 +56,12 @@ test('desktop shell starts with the restricted preload bridge', async () => {
     ]))
 
     const updateStatus = await window.evaluate(() => window.mqttape!.getUpdateStatus())
-    expect(updateStatus).toMatchObject({ mode: 'disabled', reason: 'development' })
+    if (packagedExecutable) {
+      expect(updateStatus.reason).not.toBe('development')
+      expect(updateStatus.currentVersion).toMatch(/^\d+\.\d+\.\d+/)
+    } else {
+      expect(updateStatus).toMatchObject({ mode: 'disabled', reason: 'development' })
+    }
 
     await window.getByLabel('Protocol').selectOption('wss')
     await window.getByText('Advanced settings').click()
@@ -67,7 +80,12 @@ test('desktop shell starts with the restricted preload bridge', async () => {
     try {
       await application?.close()
     } finally {
-      await rm(userDataDirectory, { recursive: true, force: true })
+      await rm(userDataDirectory, {
+        recursive: true,
+        force: true,
+        maxRetries: 5,
+        retryDelay: 200
+      })
     }
   }
 })

@@ -53,6 +53,81 @@ jobs:
         run: npm run build
       - name: Package ${{ matrix.target }}
         run: npx electron-builder ${{ matrix.args }} --publish never
+      - name: Validate Windows packages
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: |
+          $packages = @(Get-ChildItem -LiteralPath release -File -Filter '*.exe')
+          $setup = @($packages | Where-Object Name -Like 'MQTTape-Setup-*')
+          $portable = @($packages | Where-Object Name -Like 'MQTTape-*-portable-*')
+
+          if ($packages.Count -ne 2 -or $setup.Count -ne 1 -or $portable.Count -ne 1) {
+            throw "Expected one Setup and one Portable package, found: $($packages.Name -join ', ')"
+          }
+          foreach ($package in $packages) {
+            if ($package.Length -lt 1MB) {
+              throw "Package is unexpectedly small: $($package.FullName)"
+            }
+          }
+      - name: Validate macOS packages
+        if: runner.os == 'macOS'
+        shell: bash
+        run: |
+          set -euo pipefail
+          shopt -s nullglob
+          dmgs=(release/*.dmg)
+          zips=(release/*.zip)
+
+          [[ ${#dmgs[@]} -eq 1 ]] || { echo "Expected one DMG package" >&2; exit 1; }
+          [[ ${#zips[@]} -eq 1 ]] || { echo "Expected one ZIP package" >&2; exit 1; }
+          hdiutil verify "${dmgs[0]}"
+          unzip -t "${zips[0]}"
+      - name: Validate Linux packages
+        if: runner.os == 'Linux'
+        shell: bash
+        run: |
+          set -euo pipefail
+          shopt -s nullglob
+          appimages=(release/*.AppImage)
+          debs=(release/*.deb)
+
+          [[ ${#appimages[@]} -eq 1 ]] || { echo "Expected one AppImage package" >&2; exit 1; }
+          [[ ${#debs[@]} -eq 1 ]] || { echo "Expected one Debian package" >&2; exit 1; }
+          [[ -s "${appimages[0]}" && -x "${appimages[0]}" ]]
+          file "${appimages[0]}" | grep -q 'ELF'
+          dpkg-deb --info "${debs[0]}"
+      - name: Install Linux smoke-test dependencies
+        if: runner.os == 'Linux'
+        run: npx playwright install-deps
+      - name: Smoke test packaged Windows app
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: |
+          $executable = Get-ChildItem -LiteralPath release -Recurse -File -Filter 'MQTTape.exe' |
+            Where-Object FullName -Match 'unpacked' |
+            Select-Object -First 1
+          if ($null -eq $executable) {
+            throw 'Packaged executable was not found.'
+          }
+
+          $env:MQTTAPE_E2E_EXECUTABLE = $executable.FullName
+          npx playwright test tests/e2e/desktop.spec.ts
+      - name: Smoke test packaged macOS app
+        if: runner.os == 'macOS'
+        shell: bash
+        run: |
+          set -euo pipefail
+          executable="$(find release -type f -path '*/MQTTape.app/Contents/MacOS/MQTTape' -print -quit)"
+          [[ -n "$executable" && -x "$executable" ]]
+          MQTTAPE_E2E_EXECUTABLE="$executable" npx playwright test tests/e2e/desktop.spec.ts
+      - name: Smoke test packaged Linux app
+        if: runner.os == 'Linux'
+        shell: bash
+        run: |
+          set -euo pipefail
+          executable="$(find release -type f -path '*unpacked*/mqttape' -print -quit)"
+          [[ -n "$executable" && -x "$executable" ]]
+          MQTTAPE_E2E_EXECUTABLE="$executable" xvfb-run -a npx playwright test tests/e2e/desktop.spec.ts
       - name: Upload packages
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
         with:
