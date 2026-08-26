@@ -7,6 +7,7 @@ if (!Number.isInteger(e2ePort) || e2ePort < 1 || e2ePort > 65_535) {
 }
 
 const e2eBaseUrl = `http://127.0.0.1:${e2ePort}`
+const packagedDesktopSmoke = Boolean(process.env.MQTTAPE_E2E_EXECUTABLE)
 
 export default defineConfig({
   testDir: './tests/e2e',
@@ -22,10 +23,12 @@ export default defineConfig({
     screenshot: 'only-on-failure',
     trace: 'retain-on-failure'
   },
-  webServer: {
-    command: `npm run preview:web -- --port ${e2ePort}`,
-    url: e2eBaseUrl,
-    reuseExistingServer: false,
-    timeout: 120_000
-  }
+  webServer: packagedDesktopSmoke
+    ? undefined
+    : {
+        command: `npm run preview:web -- --port ${e2ePort}`,
+        url: e2eBaseUrl,
+        reuseExistingServer: false,
+        timeout: 120_000
+      }
 })
