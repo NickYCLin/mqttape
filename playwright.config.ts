@@ -1,5 +1,13 @@
 import { defineConfig } from '@playwright/test'
 
+const e2ePort = Number(process.env.MQTTAPE_E2E_PORT ?? 4174)
+
+if (!Number.isInteger(e2ePort) || e2ePort < 1 || e2ePort > 65_535) {
+  throw new Error('MQTTAPE_E2E_PORT must be an integer between 1 and 65535')
+}
+
+const e2eBaseUrl = `http://127.0.0.1:${e2ePort}`
+
 export default defineConfig({
   testDir: './tests/e2e',
   fullyParallel: false,
@@ -10,14 +18,14 @@ export default defineConfig({
     : 'line',
   outputDir: 'test-results/e2e',
   use: {
-    baseURL: 'http://127.0.0.1:4173',
+    baseURL: e2eBaseUrl,
     screenshot: 'only-on-failure',
     trace: 'retain-on-failure'
   },
   webServer: {
-    command: 'npm run preview:web',
-    url: 'http://127.0.0.1:4173',
-    reuseExistingServer: !process.env.CI,
-    timeout: 30_000
+    command: `npm run preview:web -- --port ${e2ePort}`,
+    url: e2eBaseUrl,
+    reuseExistingServer: false,
+    timeout: 120_000
   }
 })
