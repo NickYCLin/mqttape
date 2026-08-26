@@ -90,7 +90,7 @@ interface BrokerWorkspaceProps {
 }
 
 function createSessionId(): string {
-  return `session_${globalThis.crypto?.randomUUID?.() ?? `${Date.now()}_${Math.random().toString(36).slice(2)}`}`
+  return `session_${globalThis.crypto.randomUUID()}`
     .replace(/-/g, '_')
 }
 
