@@ -22,6 +22,15 @@ export default defineConfig({
   },
   build: {
     outDir: resolve('dist-web'),
-    emptyOutDir: true
+    emptyOutDir: true,
+    rollupOptions: {
+      output: {
+        manualChunks: {
+          'react-vendor': ['react', 'react-dom'],
+          'protobuf-vendor': ['protobufjs'],
+          'cbor-vendor': ['cbor-x']
+        }
+      }
+    }
   }
 })
