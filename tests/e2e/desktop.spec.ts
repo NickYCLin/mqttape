@@ -33,7 +33,7 @@ test('desktop shell starts with the restricted preload bridge', async () => {
     await expect(window).toHaveTitle('MQTTape')
     await expect(window.locator('html')).toHaveAttribute('lang', 'zh-TW')
     await expect(window.getByLabel('介面語言')).toHaveValue('zh-TW')
-    await expect(window.getByTitle('桌面完整版')).toBeVisible()
+    await expect(window.getByTitle('桌面完整版')).toHaveText('桌面完整版')
     await expect(window.getByLabel('通訊協定')).toHaveValue('mqtt')
     await expect(window.getByLabel('連接埠')).toHaveValue('1883')
     await expect(window.getByRole('note')).toContainText(
@@ -73,7 +73,7 @@ test('desktop shell starts with the restricted preload bridge', async () => {
     await window.getByRole('button', { name: 'Add parameter' }).click()
     await expect(window.getByLabel('WebSocket query parameter 1 name')).toBeVisible()
 
-    await expect(window.getByTitle('Desktop Full')).toBeVisible()
+    await expect(window.getByTitle('Desktop Full')).toHaveText('Desktop Full')
     await expect(window.getByRole('note')).toContainText('8084 is a common Broker default')
     await expect(window.getByLabel('HTTP Basic username')).toBeVisible()
   } finally {
