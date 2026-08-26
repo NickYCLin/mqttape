@@ -1,6 +1,6 @@
 {
   "name": "mqttape",
-  "version": "0.12.0",
+  "version": "0.12.1",
   "description": "Capture, inspect, and replay MQTT traffic.",
   "type": "module",
   "main": "out/main/index.js",
