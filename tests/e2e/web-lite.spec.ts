@@ -89,7 +89,7 @@ test('Web Lite starts in Traditional Chinese and persists user-selected English'
 }) => {
   await page.goto('/')
 
-  await expect(page).toHaveTitle('MQTTape')
+  await expect(page).toHaveTitle('MQTTape — MQTT 流量擷取、封包檢視與重播')
   await expect(page.locator('html')).toHaveAttribute('lang', 'zh-TW')
   await expect(page.getByLabel('介面語言')).toHaveValue('zh-TW')
   await expect(page.getByRole('heading', { name: '連線' })).toBeVisible()

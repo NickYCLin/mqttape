@@ -1,0 +1,28 @@
+# MQTTape
+
+> Open-source MQTT 3.1.1 and MQTT 5.0 traffic recorder, packet inspector, topic explorer, payload viewer, and replay tool for desktop and browser.
+
+MQTTape is an MQTT client, not a broker. The desktop app supports TCP, TLS, WebSocket, custom CA certificates, and mTLS on Windows, macOS, and Linux. Web Lite runs in a browser and connects through WebSocket. The interface supports Traditional Chinese and English.
+
+## Start here
+
+- [README](https://raw.githubusercontent.com/NickYCLin/mqttape/main/README.md): Features, downloads, desktop and Web Lite comparison, security notes, and development commands.
+- [Project guide](https://raw.githubusercontent.com/NickYCLin/mqttape/main/docs/PROJECT_OVERVIEW.md): Short architecture map, entry points, runtime boundaries, and test commands.
+- [Changelog](https://raw.githubusercontent.com/NickYCLin/mqttape/main/CHANGELOG.md): Released and unreleased changes.
+
+## Use MQTTape
+
+- [Web Lite](https://nickyclin.github.io/mqttape/): Browser version for MQTT over WebSocket.
+- [Latest release](https://github.com/NickYCLin/mqttape/releases/latest): Desktop installers and portable packages for Windows, macOS, and Linux.
+- [GitHub repository](https://github.com/NickYCLin/mqttape): Source code, issues, workflows, and release history.
+
+## Development and safety
+
+- [Contributing](https://raw.githubusercontent.com/NickYCLin/mqttape/main/CONTRIBUTING.md): Local workflow and contribution rules.
+- [Security policy](https://raw.githubusercontent.com/NickYCLin/mqttape/main/SECURITY.md): Supported versions and vulnerability reporting process.
+- [Release automation](https://raw.githubusercontent.com/NickYCLin/mqttape/main/docs/RELEASE_AUTOMATION.zh-TW.md): Versioning, packaging, and release workflow.
+
+## Optional
+
+- [License](https://raw.githubusercontent.com/NickYCLin/mqttape/main/LICENSE): MIT License.
+- [Third-party notices](https://raw.githubusercontent.com/NickYCLin/mqttape/main/THIRD_PARTY_NOTICES.md): Bundled schemas and third-party license notices.

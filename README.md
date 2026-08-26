@@ -1,8 +1,23 @@
-# MQTTape
+# MQTTape — MQTT 流量擷取、檢視與重播工具
 
-**擷取、檢視並重播 MQTT 流量。**
+**桌面版與 Web Lite 都能用的開源 MQTT 除錯工具。**
 
-MQTTape 是一套可在桌面與瀏覽器使用的開源 MQTT 除錯工具。它保留早期 Chrome MQTT 工具即開即用的便利性，並加入可搜尋的訊息時間軸、Topic 樹、可攜式擷取檔及 LoRaWAN 輔助功能。
+MQTTape is an open-source MQTT traffic recorder, packet inspector, topic explorer, and replay tool for MQTT 3.1.1 and MQTT 5.0. It runs on Windows, macOS, Linux, and in the browser over WebSocket.
+
+[![CI](https://github.com/NickYCLin/mqttape/actions/workflows/ci.yml/badge.svg)](https://github.com/NickYCLin/mqttape/actions/workflows/ci.yml)
+[![Latest release](https://img.shields.io/github/v/release/NickYCLin/mqttape?display_name=tag&sort=semver)](https://github.com/NickYCLin/mqttape/releases/latest)
+[![License: MIT](https://img.shields.io/github/license/NickYCLin/mqttape)](LICENSE)
+
+[立即使用 Web Lite](https://nickyclin.github.io/mqttape/) · [下載桌面版](https://github.com/NickYCLin/mqttape/releases/latest) · [比較桌面版與 Web Lite](#桌面版與-web-lite) · [查看程式碼導覽](docs/PROJECT_OVERVIEW.md)
+
+MQTTape 保留早期 Chrome MQTT 工具即開即用的便利性，並加入可搜尋的訊息時間軸、Topic 樹、可攜式擷取檔及 LoRaWAN 輔助功能。
+
+## 適合用來
+
+- 即時檢查 MQTT 訊息、Topic、QoS 封包流程與 MQTT 5 Publish Properties
+- 擷取測試流量，裁切敏感或無關資料後，在另一個 Broker 安全預覽及重播
+- 檢視 JSON、Hex、CBOR、Protobuf 與 Sparkplug B Payload
+- 除錯 The Things Stack 或 ChirpStack 的 LoRaWAN MQTT Uplink／Downlink
 
 ## 目前功能
 

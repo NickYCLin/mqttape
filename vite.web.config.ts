@@ -10,10 +10,20 @@ const developmentCspPlugin: Plugin = {
   transformIndexHtml: allowViteDevelopmentStyles
 }
 
+const webPageTitlePlugin: Plugin = {
+  name: 'mqttape-web-page-title',
+  transformIndexHtml(html) {
+    return html.replace(
+      '<title>MQTTape</title>',
+      '<title>MQTTape — MQTT 流量擷取、封包檢視與重播</title>'
+    )
+  }
+}
+
 export default defineConfig({
   root: 'src/renderer',
   base: './',
-  plugins: [developmentCspPlugin, react()],
+  plugins: [webPageTitlePlugin, developmentCspPlugin, react()],
   resolve: {
     alias: {
       '@renderer': resolve('src/renderer/src'),
