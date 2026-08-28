@@ -15,6 +15,28 @@ if ($file.Length -lt 1MB) {
 }
 
 Add-Type -AssemblyName System.IO.Compression.FileSystem
+
+function Assert-StoreVersion {
+  param(
+    [Parameter(Mandatory = $true)][string]$Version,
+    [Parameter(Mandatory = $true)][string]$Context
+  )
+
+  if ($Version -notmatch '^(\d+)\.(\d+)\.(\d+)\.(\d+)$') {
+    throw "$Context version must use four numeric parts: $Version"
+  }
+  $parts = @($Matches[1..4] | ForEach-Object { [uint32]$_ })
+  if ($parts | Where-Object { $_ -gt 65535 }) {
+    throw "$Context version contains a value above 65535: $Version"
+  }
+  if ($parts[0] -eq 0) {
+    throw "$Context version major must be greater than zero for Microsoft Store: $Version"
+  }
+  if ($parts[3] -ne 0) {
+    throw "$Context version revision must be zero for Microsoft Store: $Version"
+  }
+}
+
 $archive = [IO.Compression.ZipFile]::OpenRead($resolvedPath)
 try {
   if ($file.Extension -eq '.msix') {
@@ -38,6 +60,7 @@ try {
       [string]::IsNullOrWhiteSpace($identity.GetAttribute('Publisher'))) {
       throw "Package identity is incomplete in $resolvedPath"
     }
+    Assert-StoreVersion -Version $identity.GetAttribute('Version') -Context 'MSIX'
     $architecture = $identity.GetAttribute('ProcessorArchitecture')
     if ($ExpectedArchitecture -and $architecture -ne $ExpectedArchitecture) {
       throw "Expected $ExpectedArchitecture package, manifest contains $architecture."
@@ -75,8 +98,19 @@ try {
 
     $namespace = [Xml.XmlNamespaceManager]::new($manifest.NameTable)
     $namespace.AddNamespace('bundle', 'http://schemas.microsoft.com/appx/2013/bundle')
+    $identity = $manifest.SelectSingleNode('/bundle:Bundle/bundle:Identity', $namespace)
+    if ($null -eq $identity -or
+      [string]::IsNullOrWhiteSpace($identity.GetAttribute('Name')) -or
+      [string]::IsNullOrWhiteSpace($identity.GetAttribute('Publisher'))) {
+      throw "Bundle identity is incomplete in $resolvedPath"
+    }
+    $bundleVersion = $identity.GetAttribute('Version')
+    Assert-StoreVersion -Version $bundleVersion -Context 'MSIX bundle'
+    $bundlePackages = @(
+      $manifest.SelectNodes('/bundle:Bundle/bundle:Packages/bundle:Package', $namespace)
+    )
     $architectures = @(
-      $manifest.SelectNodes('/bundle:Bundle/bundle:Packages/bundle:Package', $namespace) |
+      $bundlePackages |
         ForEach-Object { $_.GetAttribute('Architecture') } |
         Sort-Object -Unique
     )
@@ -86,6 +120,11 @@ try {
     $packageEntries = @($archive.Entries | Where-Object FullName -Match '\.msix$')
     if ($packageEntries.Count -ne 2) {
       throw "Expected two embedded MSIX packages, found $($packageEntries.Count)."
+    }
+    foreach ($package in $bundlePackages) {
+      if ($package.GetAttribute('Version') -ne $bundleVersion) {
+        throw "Bundle and embedded package versions differ: $bundleVersion and $($package.GetAttribute('Version'))."
+      }
     }
 
     Write-Host "Validated x64 and ARM64 MSIX bundle: $resolvedPath"

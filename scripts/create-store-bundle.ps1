@@ -44,9 +44,49 @@ foreach ($package in $packages) {
   }
 }
 
+function Get-PackageIdentity {
+  param([Parameter(Mandatory = $true)][IO.FileInfo]$Package)
+
+  Add-Type -AssemblyName System.IO.Compression.FileSystem
+  $archive = [IO.Compression.ZipFile]::OpenRead($Package.FullName)
+  try {
+    $manifestEntry = $archive.GetEntry('AppxManifest.xml')
+    if ($null -eq $manifestEntry) {
+      throw "AppxManifest.xml is missing from $($Package.FullName)"
+    }
+    $reader = [IO.StreamReader]::new($manifestEntry.Open())
+    try {
+      [xml]$manifest = $reader.ReadToEnd()
+    } finally {
+      $reader.Dispose()
+    }
+    $namespace = [Xml.XmlNamespaceManager]::new($manifest.NameTable)
+    $namespace.AddNamespace('appx', 'http://schemas.microsoft.com/appx/manifest/foundation/windows10')
+    $identity = $manifest.SelectSingleNode('/appx:Package/appx:Identity', $namespace)
+    if ($null -eq $identity) {
+      throw "Package identity is missing from $($Package.FullName)"
+    }
+    return [pscustomobject]@{
+      Name = $identity.GetAttribute('Name')
+      Publisher = $identity.GetAttribute('Publisher')
+      Version = $identity.GetAttribute('Version')
+    }
+  } finally {
+    $archive.Dispose()
+  }
+}
+
 $validatorPath = Join-Path $PSScriptRoot 'validate-store-package.ps1'
 & $validatorPath -Path $x64Packages[0].FullName -ExpectedArchitecture x64
 & $validatorPath -Path $arm64Packages[0].FullName -ExpectedArchitecture arm64
+
+$x64Identity = Get-PackageIdentity -Package $x64Packages[0]
+$arm64Identity = Get-PackageIdentity -Package $arm64Packages[0]
+foreach ($field in @('Name', 'Publisher', 'Version')) {
+  if ($x64Identity.$field -cne $arm64Identity.$field) {
+    throw "x64 and ARM64 package identities differ for ${field}: '$($x64Identity.$field)' and '$($arm64Identity.$field)'."
+  }
+}
 
 $packageJson = Get-Content -LiteralPath (Join-Path $projectRoot 'package.json') -Raw | ConvertFrom-Json
 $bundlePath = Join-Path $releasePath "MQTTape-$($packageJson.version)-store.msixbundle"
@@ -58,7 +98,7 @@ $mappingLines = @(
 )
 [IO.File]::WriteAllText($mappingPath, ($mappingLines -join "`r`n"), [Text.UTF8Encoding]::new($false))
 
-& $makeAppxPath bundle /o /f $mappingPath /p $bundlePath
+& $makeAppxPath bundle /o /bv $x64Identity.Version /f $mappingPath /p $bundlePath
 if ($LASTEXITCODE -ne 0) {
   throw "MakeAppx.exe failed with exit code $LASTEXITCODE."
 }

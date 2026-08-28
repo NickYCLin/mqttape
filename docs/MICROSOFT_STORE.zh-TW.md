@@ -28,6 +28,8 @@ Partner Center 的正式識別值可參考 [Microsoft 的產品識別說明](htt
 4. 使用 Windows SDK `MakeAppx.exe` 合併 `MQTTape-<version>-store.msixbundle`，並檢查 bundle 內容。
 5. 上傳 `MQTTape-Microsoft-Store` workflow artifact 與 SHA-256 清單。
 
+Store 套件使用獨立的四段式版本，規則是將 MQTTape 的 SemVer 主版號加 1，並將第四段固定為 0。例如 App `0.12.1` 對應 Store `1.12.1.0`，未來 App `1.0.0` 會對應 Store `2.0.0.0`。這是為了符合 [Microsoft Store 套件版本規則](https://learn.microsoft.com/en-us/windows/apps/publish/publish-your-app/msix/app-package-requirements)中第一段不得為 0、第四段必須為 0 的限制，同時維持升版順序；不會改變程式內顯示的 App 版本或 GitHub Release 檔名。
+
 正式送審時上傳 `.msixbundle` 即可。Partner Center 接受 `.msix`、`.msixbundle` 與 `.msixupload`；多架構應用使用 bundle，可讓 Store 只派送裝置需要的架構。詳見 [Microsoft Store 套件上傳說明](https://learn.microsoft.com/en-us/windows/apps/publish/publish-your-app/msix/upload-app-packages)。
 
 ### 本機建立
@@ -50,7 +52,7 @@ npm run package:store
 - 用 Windows App Certification Kit 測試 bundle。`MakeAppx` 建置成功與 manifest 檢查不能取代 WACK 與實際功能測試。
 - 在 x64 與 ARM64 裝置確認啟動、MQTT TCP/TLS/WebSocket、檔案匯入匯出及安全儲存行為。
 - 準備 Store 說明、隱私權政策 URL、支援 URL、年齡分級與實際畫面截圖。
-- 確認套件版本高於已送審版本；Store 不允許重複使用相同版本覆蓋舊套件。
+- 確認套件版本高於已送審版本；Store 不允許重複使用相同版本覆蓋舊套件。正式 artifact 的兩份 MSIX 與 bundle 必須使用相同版本。
 - 先以 package flight 或隱藏可用性完成驗收，再公開上架。
 
 [Windows App Certification Kit 官方說明](https://learn.microsoft.com/en-us/windows/uwp/debug-test-perf/windows-app-certification-kit)列出安裝位置與測試流程。

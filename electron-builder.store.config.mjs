@@ -1,4 +1,5 @@
 import { readFileSync } from 'node:fs'
+import { readFile, writeFile } from 'node:fs/promises'
 import { URL } from 'node:url'
 
 const packageJson = JSON.parse(
@@ -21,8 +22,38 @@ if (!['x64', 'arm64'].includes(storeArch)) {
   throw new Error(`MS_STORE_ARCH must be x64 or arm64, received: ${storeArch}`)
 }
 
+function toStoreVersion(version) {
+  const match = /^(\d+)\.(\d+)\.(\d+)$/.exec(version)
+  if (!match) {
+    throw new Error(`Microsoft Store packages require a stable SemVer version, received: ${version}`)
+  }
+
+  const [, majorText, minorText, patchText] = match
+  const parts = [Number(majorText) + 1, Number(minorText), Number(patchText), 0]
+  if (parts.some((part) => !Number.isInteger(part) || part < 0 || part > 65535)) {
+    throw new Error(`Microsoft Store version is out of range: ${parts.join('.')}`)
+  }
+  return parts.join('.')
+}
+
+const storeVersion = toStoreVersion(packageJson.version)
+
+async function setStoreManifestVersion(manifestPath) {
+  const manifest = await readFile(manifestPath, 'utf8')
+  let replacements = 0
+  const updated = manifest.replace(/(<Identity\b[^>]*\bVersion=")[^"]+("[^>]*>)/, (...args) => {
+    replacements += 1
+    return `${args[1]}${storeVersion}${args[2]}`
+  })
+  if (replacements !== 1) {
+    throw new Error(`Expected one Identity Version in AppxManifest.xml, found: ${replacements}`)
+  }
+  await writeFile(manifestPath, updated, 'utf8')
+}
+
 export default {
   ...base,
+  appxManifestCreated: setStoreManifestVersion,
   publish: null,
   directories: {
     ...base.directories,
