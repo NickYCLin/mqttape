@@ -4,6 +4,7 @@ export interface UpdateEnvironment {
   isPackaged: boolean
   platform: NodeJS.Platform
   arch: NodeJS.Architecture
+  windowsStore?: boolean
   portableExecutableDirectory?: string
   appImagePath?: string
   linuxPackageType?: string
@@ -16,6 +17,12 @@ export interface UpdateSupport {
 
 export function resolveUpdateSupport(environment: UpdateEnvironment): UpdateSupport {
   if (!environment.isPackaged) return { mode: 'disabled', reason: 'development' }
+
+  // Microsoft Store owns the MSIX update lifecycle. Running electron-updater
+  // here could otherwise offer the unrelated NSIS package to Store users.
+  if (environment.platform === 'win32' && environment.windowsStore) {
+    return { mode: 'disabled', reason: 'microsoft-store' }
+  }
 
   // macOS builds are unsigned on every architecture, and that is the reason
   // users should see; the architecture check below would otherwise shadow it

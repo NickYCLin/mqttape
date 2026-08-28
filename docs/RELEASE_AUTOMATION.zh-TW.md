@@ -77,6 +77,14 @@ MQTTape 為三大作業系統與兩大主流 CPU 架構提供原生編譯的二�
 
 ---
 
+## Microsoft Store MSIX
+
+Store 套件不跟著 Release Tag 自動發布。維護者需先在 Partner Center 保留產品名稱並設定三個產品識別變數，再手動執行 `store-msix.yml`。工作流程會產生 x64 與 ARM64 MSIX、合併成一份 `.msixbundle` 並驗證封裝結構；最後仍須由維護者完成 WACK、Store 列表資料與送審。完整步驟見 [Microsoft Store MSIX 發布手冊](MICROSOFT_STORE.zh-TW.md)。
+
+Store 版的安裝、簽章與更新皆由 Microsoft Store 管理，不使用 GitHub Release 的 `electron-updater`，也不改變既有 Setup／Portable 的簽章狀態。
+
+---
+
 ## 🛡️ 程式碼簽章與更新安全政策
 
 ### 1. 程式碼簽章 (SignPath)
@@ -88,6 +96,7 @@ MQTTape 為三大作業系統與兩大主流 CPU 架構提供原生編譯的二�
 ### 2. 自動更新策略 (`electron-updater`)
 - **Windows x64 Setup** 與 **Linux x64** 套件內建 `electron-updater`，會在應用程式啟動時及每隔 6 小時主動查詢 GitHub Releases 的差分更新中繼資料（`latest.yml` / `latest-linux.yml`），下載完成後可一鍵重新啟動更新。
 - **ARM64 與 Portable 版本**：為避免共用 x64 差分資料導致架構錯亂，ARM64 版本於介面標題列提供「ARM64・下載更新」引導手動下載，待獨立更新 Feed 建立後另行啟用自動換版。
+- **Microsoft Store MSIX**：偵測到 Store 執行環境後停用 `electron-updater`，由 Microsoft Store 派送對應架構的更新。
 
 ### 3. SHA-256 完整性校驗
 所有 GitHub Release 資產均會附帶 `SHA256SUMS.txt`。使用者可在下載後使用下列指令驗證檔案完整性：

@@ -145,6 +145,7 @@ ChirpStack:      application/<application-id>/device/+/event/+
 > [!TIP]
 > 歡迎至 [Releases 列表](https://github.com/NickYCLin/mqttape/releases) 下載各平台安裝檔或檢視 [更新日誌 (Changelog)](CHANGELOG.md)。
 > 維護者可參考 [Release 自動化與版本規則](docs/RELEASE_AUTOMATION.zh-TW.md)；依 SemVer 與 Conventional Commits 準備版本並建立 Tag 後，系統會自動打包發布。
+> Microsoft Store 尚未公開上架；維護者可依 [Microsoft Store MSIX 發布手冊](docs/MICROSOFT_STORE.zh-TW.md)完成 Partner Center 設定與送審。
 
 ## 程式碼簽章政策
 
@@ -157,6 +158,8 @@ ChirpStack:      application/<application-id>/device/+/event/+
 - 核准後接線與驗收手冊：[docs/SIGNPATH.md](docs/SIGNPATH.md)
 
 SignPath 開源專案申請已送出但仍在等待核准。在申請與簽章流程完成之前發布的 Windows 套件仍未簽章；執行前請先使用 Release 中的 Checksum Manifest 驗證下載檔案。
+
+Microsoft Store 是另一條獨立發布管道。MSIX 通過 Store 認證後會由 Microsoft 重新簽章；這不會讓 GitHub Release 的 Setup 或 Portable 自動取得 Authenticode 簽章。
 
 ## 設定檔與 mTLS
 
@@ -171,6 +174,8 @@ TLS 檔案必須使用 MQTTape 的檔案選擇器指定。Client Certificate 與
 Windows x64 `Setup` 安裝版與支援的 Linux x64 套件會在啟動後及每六小時檢查 GitHub Releases。更新會在背景下載；準備完成後，可在標題列選擇「重新啟動以更新」。若正常關閉程式，已下載的更新也會在結束時套用。
 
 Windows Portable、所有 ARM64 套件與未簽章的 macOS Build 目前維持手動更新。ARM64 版標題列會明確顯示「ARM64・下載更新」，不會讀取 x64 的差分更新檔。若目前安裝的是導入自動更新之前的 Windows x64 版本，需要最後一次手動安裝新版 `Setup`；之後即可直接更新，不必先解除安裝。
+
+Microsoft Store MSIX 由 Store 管理更新，不會啟動 MQTTape 的 GitHub Release 更新程式。
 
 ## MQTT Last Will
 
@@ -220,6 +225,8 @@ npm run build:web
 ```bash
 npm run package
 ```
+
+Microsoft Store 的多架構 MSIX bundle 需先取得 Partner Center 產品識別值，請依 [Store 發布手冊](docs/MICROSOFT_STORE.zh-TW.md)設定後執行 `npm run package:store`。
 
 未簽章的下載檔可能觸發 Windows SmartScreen 或 macOS Gatekeeper，請參考各版本的 Release Notes。
 
@@ -284,6 +291,7 @@ MQTTape 使用 `protobufjs` 解析 Schema 的反射資訊，但以內建的直�
 
 ## Roadmap
 
+- Microsoft Store MSIX 上架（封裝管道已完成，待 Partner Center 產品識別與送審）
 - Windows 安裝程式程式碼簽章（SignPath 申請已送出，等待核准與專案參數）
 
 ## 參與貢獻

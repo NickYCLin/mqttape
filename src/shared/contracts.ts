@@ -204,6 +204,7 @@ export type UpdateState =
   | 'error'
 export type UpdateSupportReason =
   | 'development'
+  | 'microsoft-store'
   | 'portable'
   | 'unsupported-architecture'
   | 'unsigned-macos'

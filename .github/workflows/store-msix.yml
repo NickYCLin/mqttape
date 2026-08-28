@@ -1,0 +1,119 @@
+name: Microsoft Store MSIX
+
+on:
+  workflow_dispatch:
+    inputs:
+      identity_name:
+        description: Optional Package/Identity/Name override
+        required: false
+        type: string
+      publisher:
+        description: Optional Package/Identity/Publisher override
+        required: false
+        type: string
+      publisher_display_name:
+        description: Optional PublisherDisplayName override
+        required: false
+        type: string
+
+permissions:
+  contents: read
+
+jobs:
+  package:
+    name: Package ${{ matrix.arch }} MSIX
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - runner: windows-latest
+            arch: x64
+          - runner: windows-11-arm
+            arch: arm64
+    runs-on: ${{ matrix.runner }}
+    timeout-minutes: 45
+    env:
+      MS_STORE_IDENTITY_NAME: ${{ inputs.identity_name || vars.MS_STORE_IDENTITY_NAME }}
+      MS_STORE_PUBLISHER: ${{ inputs.publisher || vars.MS_STORE_PUBLISHER }}
+      MS_STORE_PUBLISHER_DISPLAY_NAME: ${{ inputs.publisher_display_name || vars.MS_STORE_PUBLISHER_DISPLAY_NAME }}
+      MS_STORE_ARCH: ${{ matrix.arch }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+      - name: Setup Node.js
+        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7
+        with:
+          node-version: 22
+          cache: npm
+      - name: Check Partner Center identity
+        shell: pwsh
+        run: |
+          $required = @(
+            'MS_STORE_IDENTITY_NAME',
+            'MS_STORE_PUBLISHER',
+            'MS_STORE_PUBLISHER_DISPLAY_NAME'
+          )
+          foreach ($name in $required) {
+            if ([string]::IsNullOrWhiteSpace([Environment]::GetEnvironmentVariable($name))) {
+              throw "Repository variable $name is missing. Copy it from Partner Center > Product identity."
+            }
+          }
+      - name: Install dependencies
+        run: npm ci
+      - name: Build MSIX package
+        run: npm run package:store
+      - name: Verify MSIX package
+        shell: pwsh
+        run: |
+          $packages = @(Get-ChildItem -LiteralPath release/store -File -Filter '*.msix')
+          if ($packages.Count -ne 1 -or $packages[0].Name -notmatch '-${{ matrix.arch }}\.msix$') {
+            throw "Expected one ${{ matrix.arch }} MSIX package, found: $($packages.Name -join ', ')."
+          }
+          ./scripts/validate-store-package.ps1 -Path $packages[0].FullName -ExpectedArchitecture ${{ matrix.arch }}
+      - name: Upload architecture package
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
+        with:
+          name: MQTTape-Store-${{ matrix.arch }}
+          path: release/store/*.msix
+          if-no-files-found: error
+          retention-days: 7
+
+  bundle:
+    name: Create Store bundle
+    needs: package
+    runs-on: windows-latest
+    timeout-minutes: 15
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+      - name: Download architecture packages
+        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8
+        with:
+          pattern: MQTTape-Store-*
+          path: release/store
+          merge-multiple: true
+      - name: Create and validate bundle
+        shell: pwsh
+        run: ./scripts/create-store-bundle.ps1
+      - name: Generate checksums
+        shell: pwsh
+        run: |
+          $artifacts = @(
+            Get-ChildItem -LiteralPath release/store -File -Filter '*.msix'
+            Get-ChildItem -LiteralPath release/store -File -Filter '*.msixbundle'
+          )
+          $artifacts |
+            Get-FileHash -Algorithm SHA256 |
+            Sort-Object Path |
+            ForEach-Object { "$($_.Hash)  $([IO.Path]::GetFileName($_.Path))" } |
+            Set-Content -LiteralPath release/store/SHA256SUMS.txt -Encoding utf8NoBOM
+      - name: Upload Store submission artifact
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
+        with:
+          name: MQTTape-Microsoft-Store
+          path: |
+            release/store/*.msix
+            release/store/*.msixbundle
+            release/store/SHA256SUMS.txt
+          if-no-files-found: error
+          retention-days: 7

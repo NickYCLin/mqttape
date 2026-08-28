@@ -258,6 +258,7 @@ if (!hasSingleInstanceLock) {
         isPackaged: app.isPackaged,
         platform: process.platform,
         arch: process.arch,
+        windowsStore: process.windowsStore,
         portableExecutableDirectory: process.env.PORTABLE_EXECUTABLE_DIR,
         appImagePath: process.env.APPIMAGE,
         linuxPackageType: readLinuxPackageType()

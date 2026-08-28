@@ -15,6 +15,21 @@ describe('resolveUpdateSupport', () => {
     })
   })
 
+  it('leaves MSIX updates to Microsoft Store on every architecture', () => {
+    expect(resolveUpdateSupport({
+      isPackaged: true,
+      platform: 'win32',
+      arch: 'x64',
+      windowsStore: true
+    })).toEqual({ mode: 'disabled', reason: 'microsoft-store' })
+    expect(resolveUpdateSupport({
+      isPackaged: true,
+      platform: 'win32',
+      arch: 'arm64',
+      windowsStore: true
+    })).toEqual({ mode: 'disabled', reason: 'microsoft-store' })
+  })
+
   it('keeps the Windows portable build on manual downloads', () => {
     expect(resolveUpdateSupport({
       isPackaged: true,

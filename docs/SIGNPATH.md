@@ -4,6 +4,8 @@
 
 MQTTape 已送出 SignPath 開源專案申請，目前仍等待核准。核准前的 Windows Release 都是未簽章套件；Release Workflow 不會把未簽章檔標示成已簽章，也不會要求任何私密金鑰。
 
+Microsoft Store MSIX 是獨立管道：Store 認證通過後會替 MSIX 重新簽章，但不會替 GitHub Release 的 Setup 或 Portable 簽章。Store 的設定與送審步驟見 [Microsoft Store MSIX 發布手冊](MICROSOFT_STORE.zh-TW.md)。
+
 ## 核准後需要取得的資料
 
 - SignPath Organization ID
