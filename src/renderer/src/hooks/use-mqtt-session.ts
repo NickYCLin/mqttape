@@ -22,13 +22,13 @@ import { updateMqttPacketFlows } from '../../../shared/packet-flow'
 import { defaultMqttLastWill } from '../../../shared/mqtt-will'
 import { defaultMqttWebSocketAuth } from '../../../shared/websocket-auth'
 import { MqttController } from '../lib/mqtt-controller'
+import { readWebProfiles, webSafeConfig, writeWebProfiles } from '../lib/web-profiles'
 
 const MAX_MESSAGES = 5_000
 // Each record keeps the payload twice (Base64 + text), so cap the retained
 // wire bytes as well or huge payloads exhaust renderer memory long before
 // the message-count limit is reached.
 const MAX_MESSAGE_BYTES = 64 * 1024 * 1024
-const WEB_PROFILE_KEY = 'mqttape:profiles:v1'
 const PROFILES_UPDATED_EVENT = 'mqttape:profiles-updated'
 
 interface ReplayControl {
@@ -74,43 +74,6 @@ function captureConnection(config: ConnectionConfig): CaptureFile['connection'] 
   delete safeConfig.websocketQueryParameters
   delete safeConfig.will
   return safeConfig as CaptureFile['connection']
-}
-
-function webSafeConfig(config: ConnectionConfig): ConnectionConfig {
-  return {
-    ...config,
-    password: '',
-    rejectUnauthorized: true,
-    caPath: '',
-    clientCertificatePath: '',
-    clientKeyPath: '',
-    clientKeyPassphrase: '',
-    websocketAuth: config.websocketAuth
-      ? { ...config.websocketAuth, secret: '' }
-      : defaultMqttWebSocketAuth(),
-    websocketHeaders: (config.websocketHeaders ?? []).map(({ name }) => ({ name, value: '' })),
-    websocketQueryParameters: (config.websocketQueryParameters ?? [])
-      .map(({ name }) => ({ name, value: '' })),
-    ...(config.will ? { will: { ...config.will, payload: '' } } : {})
-  }
-}
-
-function readWebProfiles(): BrokerProfile[] {
-  try {
-    const parsed: unknown = JSON.parse(window.localStorage.getItem(WEB_PROFILE_KEY) || '[]')
-    if (!Array.isArray(parsed)) return []
-    return parsed.filter((profile): profile is BrokerProfile =>
-      Boolean(
-        profile &&
-        typeof profile === 'object' &&
-        typeof profile.id === 'string' &&
-        profile.config &&
-        typeof profile.config.name === 'string'
-      )
-    ).map((profile) => ({ ...profile, config: webSafeConfig(profile.config), secretsStored: false }))
-  } catch {
-    return []
-  }
 }
 
 function defaultConfig(isDesktop: boolean): ConnectionConfig {
@@ -198,7 +161,7 @@ export function useMqttSession(sessionId = 'default') {
       try {
         const loaded = window.mqttape
           ? await window.mqttape.listProfiles()
-          : readWebProfiles()
+          : readWebProfiles(window.localStorage)
         if (mounted) setProfiles(loaded)
       } catch (reason) {
         if (mounted) setError(reason instanceof Error ? reason.message : String(reason))
@@ -260,7 +223,7 @@ export function useMqttSession(sessionId = 'default') {
       }
       const next = profiles.filter((profile) => profile.id !== savedProfile!.id)
       next.push(savedProfile)
-      window.localStorage.setItem(WEB_PROFILE_KEY, JSON.stringify(next))
+      writeWebProfiles(window.localStorage, next)
     })
 
     if (!succeeded || !savedProfile) return false
@@ -294,7 +257,7 @@ export function useMqttSession(sessionId = 'default') {
       if (window.mqttape) await window.mqttape.deleteProfile(selectedProfileId)
       else {
         const next = profiles.filter((profile) => profile.id !== selectedProfileId)
-        window.localStorage.setItem(WEB_PROFILE_KEY, JSON.stringify(next))
+        writeWebProfiles(window.localStorage, next)
       }
     })
     if (succeeded) {
