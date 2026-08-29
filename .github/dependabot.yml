@@ -19,7 +19,8 @@ updates:
           - minor
           - patch
     # electron-vite 5 only accepts Vite 7. Unblock this trio together after a
-    # stable electron-vite release adds Vite 8 support.
+    # stable electron-vite release adds Vite 8 support. typescript-eslint 8
+    # supports TypeScript 6 but not 7, so hold only that unsupported major.
     ignore:
       - dependency-name: vite
         versions:
@@ -30,6 +31,9 @@ updates:
       - dependency-name: electron-vite
         versions:
           - 6.x
+      - dependency-name: typescript
+        versions:
+          - 7.x
   - package-ecosystem: github-actions
     directory: /
     schedule:
