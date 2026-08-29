@@ -6,6 +6,12 @@
 
 ## 未發布
 
+### 🛠️ 問題修正與優化
+* **執行環境與相依套件**：
+  - 升級 Electron 44、CBOR 解碼器與開發工具，並明確要求 Node.js 22.12 以上。
+  - 配合 Electron 44 將 macOS 最低版本設為 macOS 13，避免產出無法執行的安裝套件。
+  - 暫緩尚未受 electron-vite 穩定版支援的 Vite 8 升級，避免 Dependabot 持續建立無法安裝的相依更新。
+
 ---
 
 ## [0.12.1](https://github.com/NickYCLin/mqttape/compare/v0.12.0...v0.12.1) (2026-08-26)
