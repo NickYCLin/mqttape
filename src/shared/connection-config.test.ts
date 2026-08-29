@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import type { ConnectionConfig } from './contracts'
-import { mqttConnectionConfigError } from './connection-config'
+import { isConnectionConfigCore, mqttConnectionConfigError } from './connection-config'
 
 function config(overrides: Partial<ConnectionConfig> = {}): ConnectionConfig {
   return {
@@ -26,6 +26,13 @@ function config(overrides: Partial<ConnectionConfig> = {}): ConnectionConfig {
 }
 
 describe('MQTT connection config', () => {
+  it('recognizes render-safe stored connection config fields', () => {
+    expect(isConnectionConfigCore(config())).toBe(true)
+    expect(isConnectionConfigCore(config({ protocol: 'mqtt' }), ['ws', 'wss'])).toBe(false)
+    expect(isConnectionConfigCore({ ...config(), host: 127 })).toBe(false)
+    expect(isConnectionConfigCore({ ...config(), reconnectPeriod: '1000' })).toBe(false)
+  })
+
   it('accepts the MQTT Keep Alive boundary values', () => {
     expect(mqttConnectionConfigError(config({ keepalive: 0 }))).toBeNull()
     expect(mqttConnectionConfigError(config({ keepalive: 65_535 }))).toBeNull()

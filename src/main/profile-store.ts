@@ -9,6 +9,7 @@ import type {
   MqttWebSocketNameValue,
   SaveBrokerProfileRequest
 } from '../shared/contracts'
+import { isConnectionConfigCore } from '../shared/connection-config'
 
 interface SecretProtector {
   isAvailable(): boolean
@@ -106,7 +107,7 @@ function normalizeStoredProfile(value: unknown): StoredProfile | null {
   if (!value || typeof value !== 'object') return null
   const candidate = value as Partial<StoredProfile>
   if (typeof candidate.id !== 'string' || !candidate.id || !candidate.config) return null
-  if (typeof candidate.config !== 'object' || typeof candidate.config.name !== 'string') return null
+  if (!isConnectionConfigCore(candidate.config)) return null
 
   return {
     id: candidate.id,
