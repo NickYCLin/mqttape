@@ -145,7 +145,7 @@ ChirpStack:      application/<application-id>/device/+/event/+
 > [!TIP]
 > 歡迎至 [Releases 列表](https://github.com/NickYCLin/mqttape/releases) 下載各平台安裝檔或檢視 [更新日誌 (Changelog)](CHANGELOG.md)。
 > 維護者可參考 [Release 自動化與版本規則](docs/RELEASE_AUTOMATION.zh-TW.md)；依 SemVer 與 Conventional Commits 準備版本並建立 Tag 後，系統會自動打包發布。
-> Microsoft Store 尚未公開上架；維護者可依 [Microsoft Store MSIX 發布手冊](docs/MICROSOFT_STORE.zh-TW.md)完成 Partner Center 設定與送審。
+> Microsoft Store 尚未公開上架；維護者可依 [Microsoft Store MSIX 發布手冊](docs/MICROSOFT_STORE.zh-TW.md)完成 Partner Center 套件上傳與送審。
 
 ## 程式碼簽章政策
 
@@ -291,7 +291,7 @@ MQTTape 使用 `protobufjs` 解析 Schema 的反射資訊，但以內建的直�
 
 ## Roadmap
 
-- Microsoft Store MSIX 上架（封裝管道已完成，待 Partner Center 產品識別與送審）
+- Microsoft Store MSIX 上架（封裝、產品識別與 Bundle 驗證已完成，待 Partner Center 上傳與送審）
 - Windows 安裝程式程式碼簽章（SignPath 申請已送出，等待核准與專案參數）
 
 ## 參與貢獻
