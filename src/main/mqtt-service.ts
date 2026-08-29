@@ -14,6 +14,7 @@ import type {
   StatusEvent,
   SubscribeRequest
 } from '../shared/contracts'
+import { mqttConnectionConfigError } from '../shared/connection-config'
 import { createMessageId } from '../shared/message'
 import {
   mqttPublishPropertiesProtocolError,
@@ -337,10 +338,8 @@ export class MqttService {
   }
 
   private validateConfig(config: ConnectionConfig): void {
-    if (!config.host.trim()) throw new Error('Broker host is required.')
-    if (!Number.isInteger(config.port) || config.port < 1 || config.port > 65_535) {
-      throw new Error('Broker port must be between 1 and 65535.')
-    }
+    const connectionError = mqttConnectionConfigError(config)
+    if (connectionError) throw new Error(connectionError)
     const webSocketError = webSocketConnectionError(config, true)
     if (webSocketError) throw new Error(webSocketError)
     mqttLastWillOptions(config.will, config.mqttVersion)
