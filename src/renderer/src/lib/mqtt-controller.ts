@@ -9,6 +9,7 @@ import type {
   StatusEvent,
   SubscribeRequest
 } from '../../../shared/contracts'
+import { mqttConnectionConfigError } from '../../../shared/connection-config'
 import {
   mqttPublishPropertiesProtocolError,
   normalizeMqttPublishProperties,
@@ -112,7 +113,8 @@ export class MqttController {
     if (config.protocol !== 'ws' && config.protocol !== 'wss') {
       throw new Error('Web Lite only supports MQTT over WebSocket (ws/wss).')
     }
-    if (!config.host.trim()) throw new Error('Broker host is required.')
+    const connectionError = mqttConnectionConfigError(config)
+    if (connectionError) throw new Error(connectionError)
     const webSocketError = webSocketConnectionError(config, false)
     if (webSocketError) throw new Error(webSocketError)
 

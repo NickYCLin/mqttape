@@ -72,6 +72,14 @@ describe('i18n', () => {
     )).toBe('MQTT 5 發布屬性需要 MQTT 5 連線。')
     expect(translateKnownMessage('zh-TW', 'Last Will topic is required.'))
       .toBe('必須輸入 Last Will Topic。')
+    expect(translateKnownMessage(
+      'zh-TW',
+      'Broker port must be a whole number from 1 to 65535.'
+    )).toBe('Broker 連接埠必須是 1 到 65535 的整數。')
+    expect(translateKnownMessage(
+      'zh-TW',
+      'Keep Alive must be a whole number from 0 to 65535 seconds.'
+    )).toBe('Keep Alive 必須是 0 到 65535 秒的整數。')
   })
 
   it('keeps unknown broker errors unchanged', () => {

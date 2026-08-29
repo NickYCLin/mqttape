@@ -118,6 +118,24 @@ test('Web Lite starts in Traditional Chinese and persists user-selected English'
   await expect(page.getByRole('note')).toContainText('This port is only a starting value')
 })
 
+test('Web Lite validates MQTT port and Keep Alive before connecting', async ({ page }) => {
+  await page.goto('/')
+  await page.getByLabel('主機').fill('broker.example.com')
+  await page.getByLabel('連接埠').fill('65536')
+  await page.getByRole('button', { name: '連線', exact: true }).click()
+  await expect(page.getByRole('alert')).toContainText(
+    'Broker 連接埠必須是 1 到 65535 的整數。'
+  )
+
+  await page.getByLabel('連接埠').fill('8084')
+  await page.getByText('進階設定', { exact: true }).click()
+  await page.getByLabel('Keep Alive（秒）').fill('65536')
+  await page.getByRole('button', { name: '連線', exact: true }).click()
+  await expect(page.getByRole('alert')).toContainText(
+    'Keep Alive 必須是 0 到 65535 秒的整數。'
+  )
+})
+
 test('Web Lite keeps multiple Broker workspaces isolated', async ({ page }) => {
   await page.goto('/')
   await selectEnglish(page)

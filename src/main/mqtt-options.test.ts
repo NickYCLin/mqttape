@@ -4,7 +4,7 @@ import { join } from 'node:path'
 import type { IClientOptions } from 'mqtt'
 import { afterEach, describe, expect, it } from 'vitest'
 import type { ConnectionConfig } from '../shared/contracts'
-import { buildBrokerUrl, createClientOptions } from './mqtt-service'
+import { buildBrokerUrl, createClientOptions, MqttService } from './mqtt-service'
 import { defaultMqttLastWill } from '../shared/mqtt-will'
 
 const temporaryDirectories: string[] = []
@@ -39,6 +39,15 @@ afterEach(async () => {
 })
 
 describe('MQTT client options', () => {
+  it('rejects invalid Broker port and Keep Alive values before connecting', async () => {
+    const service = new MqttService(() => undefined, () => undefined)
+
+    await expect(service.connect(config({ port: 65_536 })))
+      .rejects.toThrow('Broker port must be a whole number from 1 to 65535.')
+    await expect(service.connect(config({ keepalive: 65_536 })))
+      .rejects.toThrow('Keep Alive must be a whole number from 0 to 65535 seconds.')
+  })
+
   it('passes MQTT 5 and mTLS material to the MQTT client', async () => {
     const directory = await mkdtemp(join(tmpdir(), 'mqttape-tls-'))
     temporaryDirectories.push(directory)

@@ -130,7 +130,7 @@ export function ConnectionPanel({
   }
 
   return (
-    <form className="panel" onSubmit={submit}>
+    <form className="panel" noValidate onSubmit={submit}>
       <div className="panel-head">
         <h2>{t('connection.title')}</h2>
         <span className="badge">{t(isDesktop ? 'mode.desktop' : 'mode.webLite')}</span>
@@ -296,6 +296,8 @@ export function ConnectionPanel({
                   className="mono"
                   type="number"
                   min="0"
+                  max="65535"
+                  step="1"
                   value={config.keepalive}
                   disabled={connected || connecting}
                   onChange={(event) => update('keepalive', Number(event.target.value))}
