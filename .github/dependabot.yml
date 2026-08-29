@@ -5,13 +5,31 @@ updates:
     schedule:
       interval: weekly
     groups:
-      # Keep breaking major upgrades isolated so peer compatibility can be
-      # reviewed independently instead of blocking every dev dependency update.
+      # Vite and its React plugin share a strict major-version peer contract.
+      vite-major:
+        patterns:
+          - vite
+          - '@vitejs/plugin-react'
+          - electron-vite
+        update-types:
+          - major
       development-minor-patch:
         dependency-type: development
         update-types:
           - minor
           - patch
+    # electron-vite 5 only accepts Vite 7. Unblock this trio together after a
+    # stable electron-vite release adds Vite 8 support.
+    ignore:
+      - dependency-name: vite
+        versions:
+          - 8.x
+      - dependency-name: '@vitejs/plugin-react'
+        versions:
+          - 6.x
+      - dependency-name: electron-vite
+        versions:
+          - 6.x
   - package-ecosystem: github-actions
     directory: /
     schedule:

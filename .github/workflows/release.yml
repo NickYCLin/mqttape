@@ -218,8 +218,8 @@ jobs:
           |---|---|---|---|
           | **Windows** | x64 | NSIS 安裝檔 (`Setup.exe`) / Portable 免安裝版 | 🟢 安裝版支援背景自動更新 |
           | **Windows** | ARM64 | NSIS 安裝檔 (`Setup.exe`) / Portable 免安裝版 | ⚪ 手動下載更新 |
-          | **macOS** | Apple Silicon | DMG 映像檔 (`.dmg`) / ZIP 壓縮檔 | ⚪ 手動下載更新 |
-          | **macOS** | Intel x64 | DMG 映像檔 (`.dmg`) / ZIP 壓縮檔 | ⚪ 手動下載更新 |
+          | **macOS 13+** | Apple Silicon | DMG 映像檔 (`.dmg`) / ZIP 壓縮檔 | ⚪ 手動下載更新 |
+          | **macOS 13+** | Intel x64 | DMG 映像檔 (`.dmg`) / ZIP 壓縮檔 | ⚪ 手動下載更新 |
           | **Linux** | x64 (AMD64) | AppImage / Debian 套件 (`.deb`) | 🟢 支援背景自動更新 |
           | **Linux** | ARM64 | AppImage / Debian 套件 (`.deb`) | ⚪ 手動下載更新 |
           | **Web Lite** | 瀏覽器 | [線上即開即用](https://nickyclin.github.io/mqttape/) | 🟢 瀏覽器載入已部署版本 |

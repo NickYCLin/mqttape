@@ -136,8 +136,8 @@ ChirpStack:      application/<application-id>/device/+/event/+
 |---|---|---|---|
 | **Windows** | x64 (Intel / AMD) | NSIS 安裝檔 (`Setup.exe`) / Portable 免安裝版 | 🟢 安裝版支援背景自動更新 / 免安裝版手動下載 |
 | **Windows** | ARM64 | NSIS 安裝檔 (`Setup.exe`) / Portable 免安裝版 | ⚪ 手動下載更新 |
-| **macOS** | Apple Silicon (M 系列) | DMG 映像檔 (`.dmg`) / ZIP 壓縮檔 | ⚪ 手動下載更新 |
-| **macOS** | Intel x64 | DMG 映像檔 (`.dmg`) / ZIP 壓縮檔 | ⚪ 手動下載更新 |
+| **macOS 13+** | Apple Silicon (M 系列) | DMG 映像檔 (`.dmg`) / ZIP 壓縮檔 | ⚪ 手動下載更新 |
+| **macOS 13+** | Intel x64 | DMG 映像檔 (`.dmg`) / ZIP 壓縮檔 | ⚪ 手動下載更新 |
 | **Linux** | x64 (AMD64) | AppImage / Debian 套件 (`.deb`) | 🟢 支援背景自動更新 |
 | **Linux** | ARM64 (aarch64) | AppImage / Debian 套件 (`.deb`) | ⚪ 手動下載更新 |
 | **Web Lite** | 跨平台瀏覽器 | 靜態 Web 應用 ([線上使用](https://nickyclin.github.io/mqttape/)) | 🟢 瀏覽器即時載入最新版 |
@@ -187,7 +187,7 @@ Last Will 是 Client 在 `CONNECT` 時交給 Broker 的遺囑：只有連線在�
 
 環境需求：
 
-- Node.js 20 以上
+- Node.js 22.12 以上
 - npm 10 以上
 
 ```bash

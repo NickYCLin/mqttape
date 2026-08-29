@@ -69,8 +69,8 @@ MQTTape 為三大作業系統與兩大主流 CPU 架構提供原生編譯的二�
 | **Windows** | x64 (Intel/AMD) | Portable 免安裝 (`.exe`) | `MQTTape-<version>-portable-x64.exe` | ⚪ 手動下載更新 |
 | **Windows** | ARM64 | NSIS 安裝檔 (`.exe`) | `MQTTape-Setup-<version>-arm64.exe` | ⚪ 手動下載更新 |
 | **Windows** | ARM64 | Portable 免安裝 (`.exe`) | `MQTTape-<version>-portable-arm64.exe` | ⚪ 手動下載更新 |
-| **macOS** | Apple Silicon (M 系列) | DMG 映像檔 (`.dmg`) / ZIP | `MQTTape-<version>-mac-arm64.dmg` | ⚪ 手動下載更新 |
-| **macOS** | Intel x64 | DMG 映像檔 (`.dmg`) / ZIP | `MQTTape-<version>-mac-x64.dmg` | ⚪ 手動下載更新 |
+| **macOS 13+** | Apple Silicon (M 系列) | DMG 映像檔 (`.dmg`) / ZIP | `MQTTape-<version>-mac-arm64.dmg` | ⚪ 手動下載更新 |
+| **macOS 13+** | Intel x64 | DMG 映像檔 (`.dmg`) / ZIP | `MQTTape-<version>-mac-x64.dmg` | ⚪ 手動下載更新 |
 | **Linux** | x64 (AMD64) | AppImage / Debian 套件 (`.deb`) | `MQTTape-<version>-linux-x86_64.AppImage` / `MQTTape-<version>-linux-amd64.deb` | 🟢 支援背景自動更新 |
 | **Linux** | ARM64 (aarch64) | AppImage / Debian 套件 (`.deb`) | `MQTTape-<version>-linux-arm64.AppImage` | ⚪ 手動下載更新 |
 | **Web Lite** | 跨平台網頁 | 靜態 Web 應用 | [線上即開即用](https://nickyclin.github.io/mqttape/) | 🟢 瀏覽器即時載入最新版 |
