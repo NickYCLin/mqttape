@@ -5,6 +5,7 @@ import type {
   MqttWebSocketAuth,
   MqttWebSocketNameValue
 } from '../../../shared/contracts'
+import { isConnectionConfigCore } from '../../../shared/connection-config'
 import { defaultMqttWebSocketAuth } from '../../../shared/websocket-auth'
 
 export const WEB_PROFILE_STORAGE_KEY = 'mqttape:profiles:v1'
@@ -85,25 +86,8 @@ function normalizeWebProfile(value: unknown): BrokerProfile | null {
   const profile = value as Partial<BrokerProfile>
   const id = typeof profile.id === 'string' ? profile.id.trim() : ''
   if (!id) return null
-  if (!profile.config || typeof profile.config !== 'object') return null
-  const config = profile.config as Partial<ConnectionConfig>
-  const name = typeof config.name === 'string' ? config.name.trim() : ''
-  if (
-    !name ||
-    (config.protocol !== 'ws' && config.protocol !== 'wss') ||
-    typeof config.host !== 'string' ||
-    typeof config.port !== 'number' ||
-    !Number.isFinite(config.port) ||
-    typeof config.path !== 'string' ||
-    typeof config.clientId !== 'string' ||
-    typeof config.username !== 'string' ||
-    (config.mqttVersion !== 4 && config.mqttVersion !== 5) ||
-    typeof config.clean !== 'boolean' ||
-    typeof config.keepalive !== 'number' ||
-    !Number.isFinite(config.keepalive) ||
-    typeof config.reconnectPeriod !== 'number' ||
-    !Number.isFinite(config.reconnectPeriod)
-  ) return null
+  if (!isConnectionConfigCore(profile.config, ['ws', 'wss'])) return null
+  const name = profile.config.name.trim()
   return {
     id,
     config: webSafeConfig({ ...profile.config, name }),

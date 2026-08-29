@@ -1,4 +1,4 @@
-import { mkdtemp, rm } from 'node:fs/promises'
+import { mkdtemp, rm, writeFile } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { createRequire } from 'node:module'
@@ -14,6 +14,30 @@ test('desktop shell starts with the restricted preload bridge', async () => {
   let application: Awaited<ReturnType<typeof electron.launch>> | undefined
 
   try {
+    const storedConfig = {
+      name: 'Stored desktop broker',
+      protocol: 'mqtt',
+      host: '127.0.0.1',
+      port: 1883,
+      path: 'mqtt',
+      clientId: 'mqttape_desktop_profile',
+      username: '',
+      mqttVersion: 5,
+      clean: true,
+      keepalive: 60,
+      reconnectPeriod: 1_000,
+      rejectUnauthorized: true,
+      caPath: '',
+      clientCertificatePath: '',
+      clientKeyPath: ''
+    }
+    await writeFile(join(userDataDirectory, 'profiles.json'), JSON.stringify({
+      version: 1,
+      profiles: [
+        { id: 'stored-valid', config: storedConfig },
+        { id: 'stored-invalid', config: { ...storedConfig, host: 127 } }
+      ]
+    }))
     application = await electron.launch({
       executablePath: packagedExecutable || electronPath,
       args: [
@@ -36,6 +60,12 @@ test('desktop shell starts with the restricted preload bridge', async () => {
     await expect(window.getByTitle('桌面完整版')).toHaveText('桌面完整版')
     await expect(window.getByLabel('通訊協定')).toHaveValue('mqtt')
     await expect(window.getByLabel('連接埠')).toHaveValue('1883')
+    await expect(window.getByLabel('已儲存的 Broker 設定檔').locator('option')).toHaveText([
+      '新增未儲存的設定檔',
+      'Stored desktop broker'
+    ])
+    await window.getByLabel('已儲存的 Broker 設定檔').selectOption('stored-valid')
+    await expect(window.getByLabel('主機')).toHaveValue('127.0.0.1')
     await expect(window.getByRole('note')).toContainText(
       'MQTT over TCP · 登記連接埠 1883 · 未加密'
     )
@@ -73,7 +103,7 @@ test('desktop shell starts with the restricted preload bridge', async () => {
     await window.getByRole('button', { name: 'Add parameter' }).click()
     await expect(window.getByLabel('WebSocket query parameter 1 name')).toBeVisible()
 
-    await expect(window.getByTitle('Desktop Full')).toHaveText('Desktop Full')
+    await expect(window.getByTitle('127.0.0.1:8084')).toHaveText('127.0.0.1:8084')
     await expect(window.getByRole('note')).toContainText('8084 is a common Broker default')
     await expect(window.getByLabel('HTTP Basic username')).toBeVisible()
   } finally {

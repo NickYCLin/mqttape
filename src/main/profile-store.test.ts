@@ -1,4 +1,4 @@
-import { mkdtemp, readFile, rm } from 'node:fs/promises'
+import { mkdtemp, readFile, rm, writeFile } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { afterEach, describe, expect, it } from 'vitest'
@@ -48,6 +48,29 @@ afterEach(async () => {
 })
 
 describe('ProfileStore', () => {
+  it('isolates malformed stored configs before they reach the renderer', async () => {
+    const directory = await mkdtemp(join(tmpdir(), 'mqttape-profile-'))
+    temporaryDirectories.push(directory)
+    const filePath = join(directory, 'profiles.json')
+    await writeFile(filePath, JSON.stringify({
+      version: 1,
+      profiles: [
+        { id: 'valid', config: config() },
+        { id: 'invalid-host', config: { ...config(), host: 127 } },
+        { id: 'invalid-protocol', config: { ...config(), protocol: 'ftp' } }
+      ]
+    }))
+    const store = new ProfileStore(filePath, {
+      isAvailable: () => false,
+      encrypt: () => Buffer.alloc(0),
+      decrypt: () => ''
+    })
+
+    const loaded = await store.list()
+    expect(loaded.map(({ id }) => id)).toEqual(['valid'])
+    expect(loaded[0].config.host).toBe('broker.example.com')
+  })
+
   it('encrypts secrets and restores the profile', async () => {
     const directory = await mkdtemp(join(tmpdir(), 'mqttape-profile-'))
     temporaryDirectories.push(directory)
