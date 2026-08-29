@@ -11,6 +11,7 @@ import {
   DOWNLINK_HISTORY_STORAGE_KEY,
   type LoRaWanDownlinkHistoryFile
 } from '../../src/shared/lorawan-downlink-history'
+import { WEB_PROFILE_STORAGE_KEY } from '../../src/renderer/src/lib/web-profiles'
 
 async function selectEnglish(page: Page): Promise<void> {
   await page.getByLabel('介面語言').selectOption('en')
@@ -83,6 +84,28 @@ const downlinkHistory = {
     }
   ]
 } satisfies LoRaWanDownlinkHistoryFile
+
+const storedWebProfileConfig = {
+  name: 'Normal profile',
+  protocol: 'wss',
+  host: 'broker.example.com',
+  port: 8084,
+  path: 'mqtt',
+  clientId: 'mqttape_stored_profile',
+  username: '',
+  password: '',
+  mqttVersion: 5,
+  clean: true,
+  keepalive: 60,
+  reconnectPeriod: 1_000,
+  rejectUnauthorized: true,
+  caPath: '',
+  clientCertificatePath: '',
+  clientKeyPath: '',
+  clientKeyPassphrase: '',
+  websocketHeaders: [],
+  websocketQueryParameters: []
+} as const
 
 test('Web Lite starts in Traditional Chinese and persists user-selected English', async ({
   page
@@ -164,6 +187,35 @@ test('Web Lite keeps multiple Broker workspaces isolated', async ({ page }) => {
   }
   await expect(page.getByRole('tab')).toHaveCount(8)
   await expect(page.getByRole('button', { name: 'Add Broker' })).toBeDisabled()
+})
+
+test('Web Lite recovers valid Broker profiles beside malformed stored data', async ({ page }) => {
+  await page.addInitScript(({ key, config }) => {
+    window.localStorage.setItem(key, JSON.stringify([
+      { id: 'normal', config, secretsStored: false },
+      {
+        id: 'recoverable',
+        config: {
+          ...config,
+          name: 'Recoverable profile',
+          websocketHeaders: 'not-an-array'
+        },
+        secretsStored: false
+      },
+      { id: '', config, secretsStored: false }
+    ]))
+  }, { key: WEB_PROFILE_STORAGE_KEY, config: storedWebProfileConfig })
+  await page.goto('/')
+
+  const profilePicker = page.getByLabel('已儲存的 Broker 設定檔')
+  await expect(profilePicker.locator('option')).toHaveText([
+    '新增未儲存的設定檔',
+    'Normal profile',
+    'Recoverable profile'
+  ])
+  await profilePicker.selectOption('recoverable')
+  await expect(page.getByLabel('設定檔名稱')).toHaveValue('Recoverable profile')
+  await expect(page.getByLabel('主機')).toHaveValue('broker.example.com')
 })
 
 test('Web Lite configures URL authentication without persisting secret values', async ({ page }) => {
