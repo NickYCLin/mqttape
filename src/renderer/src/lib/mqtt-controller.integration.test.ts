@@ -228,6 +228,42 @@ describe('MqttController Web Lite integration', () => {
     }
   })
 
+  it('does not create a hidden connection after a Web Lite workspace is destroyed', async () => {
+    const statuses: StatusEvent[] = []
+    const controller = new MqttController('closed_during_connect')
+    const removeStatus = controller.onStatus((status) => statuses.push(status))
+    const config: ConnectionConfig = {
+      name: 'Closing WebSocket broker',
+      protocol: 'ws',
+      host: '127.0.0.1',
+      port,
+      path: 'mqtt',
+      clientId: 'mqttape_closed_during_connect',
+      username: '',
+      password: '',
+      mqttVersion: 4,
+      clean: true,
+      keepalive: 30,
+      reconnectPeriod: 0,
+      rejectUnauthorized: true,
+      caPath: '',
+      clientCertificatePath: '',
+      clientKeyPath: '',
+      clientKeyPassphrase: ''
+    }
+
+    const connecting = controller.connect(config)
+    controller.destroy(true)
+
+    await expect(connecting).rejects.toThrow(
+      'The MQTT session was closed before the connection started.'
+    )
+    await new Promise((resolve) => setTimeout(resolve, 50))
+    expect(statuses.some(({ state }) => state === 'connected')).toBe(false)
+    expect(broker.connectedClients).toBe(0)
+    removeStatus()
+  })
+
   it('publishes Last Will only after an ungraceful Web Lite disconnect', async () => {
     const observer = mqtt.connect(`ws://127.0.0.1:${port}/mqtt`, {
       protocolVersion: 4,

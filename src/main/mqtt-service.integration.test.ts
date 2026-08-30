@@ -1,4 +1,4 @@
-import { createServer, type Server } from 'node:net'
+import { createServer, type Server, type Socket } from 'node:net'
 import { createServer as createHttpServer } from 'node:http'
 import type { AddressInfo } from 'node:net'
 import { Aedes } from 'aedes'
@@ -130,6 +130,35 @@ describe('MqttService integration', () => {
     ]))
 
     await service.disconnect()
+  })
+
+  it('settles a pending connection promptly when the session is disconnected', async () => {
+    let accepted = false
+    let stalledSocket: Socket | undefined
+    const stalledServer = createServer((socket) => {
+      accepted = true
+      stalledSocket = socket
+    })
+    await new Promise<void>((resolve, reject) => {
+      stalledServer.once('error', reject)
+      stalledServer.listen(0, '127.0.0.1', resolve)
+    })
+    const stalledPort = (stalledServer.address() as AddressInfo).port
+    const service = new MqttService(() => undefined, () => undefined)
+
+    try {
+      const connecting = service.connect(connectionConfig(stalledPort, 'mqttape_pending'))
+      const rejected = expect(connecting).rejects.toThrow(
+        'The MQTT session was closed before the connection started.'
+      )
+      await waitFor(() => accepted)
+      await service.disconnect()
+      await rejected
+    } finally {
+      await service.disconnect()
+      stalledSocket?.destroy()
+      await new Promise<void>((resolve) => stalledServer.close(() => resolve()))
+    }
   })
 
   it('delivers and clears retained QoS 2 messages, then honors unsubscribe', async () => {

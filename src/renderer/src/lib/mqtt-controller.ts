@@ -28,6 +28,11 @@ type StatusListener = (event: StatusEvent) => void
 type MessageListener = (message: MqttMessageRecord) => void
 type PacketListener = (event: MqttPacketEvent) => void
 
+function forceCloseClient(client: MqttClient): void {
+  client.end(true)
+  client.stream.destroy()
+}
+
 function createId(): string {
   return `${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 9)}`
 }
@@ -62,6 +67,10 @@ function brokerUrl(config: ConnectionConfig): string {
 
 export class MqttController {
   private webClient: MqttClient | undefined
+  private abortPendingConnect: (() => void) | undefined
+  // Invalidates lazy imports and MQTT handshakes when a Web Lite workspace is
+  // disconnected or destroyed before the connection has finished.
+  private connectEpoch = 0
   private statusListeners = new Set<StatusListener>()
   private messageListeners = new Set<MessageListener>()
   private packetListeners = new Set<PacketListener>()
@@ -118,7 +127,11 @@ export class MqttController {
     const webSocketError = webSocketConnectionError(config, false)
     if (webSocketError) throw new Error(webSocketError)
 
+    const epoch = this.connectEpoch + 1
     await this.disconnect()
+    if (epoch !== this.connectEpoch) {
+      throw new Error('The MQTT session was closed before the connection started.')
+    }
     // Validate the Last Will before reporting "connecting": a thrown error after
     // that status would leave the session stuck with no way to retry.
     const will = mqttLastWillOptions(config.will, config.mqttVersion)
@@ -128,11 +141,16 @@ export class MqttController {
     try {
       mqtt = (await import('mqtt')).default
     } catch (error) {
-      this.emitStatus({
-        state: 'error',
-        detail: error instanceof Error ? error.message : String(error)
-      })
+      if (epoch === this.connectEpoch) {
+        this.emitStatus({
+          state: 'error',
+          detail: error instanceof Error ? error.message : String(error)
+        })
+      }
       throw error
+    }
+    if (epoch !== this.connectEpoch) {
+      throw new Error('The MQTT session was closed before the connection started.')
     }
     const client = mqtt.connect(brokerUrl(config), {
       clientId: config.clientId || undefined,
@@ -159,45 +177,76 @@ export class MqttController {
 
     await new Promise<void>((resolve, reject) => {
       const timeout = window.setTimeout(() => {
-        cleanup()
-        client.end(true)
-        reject(new Error('Connection timed out after 15 seconds.'))
+        rejectConnection(new Error('Connection timed out after 15 seconds.'))
       }, 15_000)
       const handleConnect = (): void => {
         cleanup()
         resolve()
       }
       const handleError = (error: Error): void => {
+        rejectConnection(error)
+      }
+      const handleClose = (): void => {
+        rejectConnection(
+          new Error('The MQTT session was closed before the connection started.'),
+          false
+        )
+      }
+      const abort = (): void => {
+        rejectConnection(new Error('The MQTT session was closed before the connection started.'))
+      }
+      const rejectConnection = (error: Error, forceClose = true): void => {
         cleanup()
-        client.end(true)
+        if (this.webClient === client) this.webClient = undefined
+        if (forceClose) forceCloseClient(client)
         reject(error)
       }
       const cleanup = (): void => {
         window.clearTimeout(timeout)
         client.off('connect', handleConnect)
         client.off('error', handleError)
+        client.off('close', handleClose)
+        if (this.abortPendingConnect === abort) this.abortPendingConnect = undefined
       }
 
+      this.abortPendingConnect = abort
       client.once('connect', handleConnect)
       client.once('error', handleError)
+      client.once('close', handleClose)
     })
   }
 
   async disconnect(): Promise<void> {
+    this.connectEpoch += 1
     if (window.mqttape) {
       await window.mqttape.disconnect(this.sessionId)
       return
     }
 
+    const abortPendingConnect = this.abortPendingConnect
+    if (abortPendingConnect) {
+      abortPendingConnect()
+      this.emitStatus({ state: 'disconnected' })
+      return
+    }
     const client = this.webClient
     this.webClient = undefined
     if (!client) return
 
     await new Promise<void>((resolve, reject) => {
-      client.end(false, {}, (error) => {
+      let settled = false
+      const finish = (error?: Error): void => {
+        if (settled) return
+        settled = true
+        window.clearTimeout(timeout)
         if (error) reject(error)
         else resolve()
-      })
+      }
+      const timeout = window.setTimeout(() => {
+        forceCloseClient(client)
+        finish()
+      }, 2_000)
+      client.end(false, {}, (error) => finish(error ?? undefined))
     })
     this.emitStatus({ state: 'disconnected' })
   }
@@ -280,34 +329,47 @@ export class MqttController {
   }
 
   destroy(force = false): void {
+    this.connectEpoch += 1
     this.bridgeCleanup.forEach((cleanup) => cleanup())
     this.bridgeCleanup = []
     if (window.mqttape) void window.mqttape.destroySession(this.sessionId).catch(() => {})
+    else if (this.abortPendingConnect) this.abortPendingConnect()
     else this.webClient?.end(force)
     this.webClient = undefined
   }
 
   private bindWebEvents(client: MqttClient, config: ConnectionConfig): void {
-    client.on('connect', () =>
-      this.emitStatus({ state: 'connected', detail: brokerEndpoint(config) })
-    )
-    client.on('reconnect', () => this.emitStatus({ state: 'reconnecting' }))
-    client.on('offline', () => this.emitStatus({ state: 'offline' }))
+    client.on('connect', () => {
+      if (this.webClient === client) {
+        this.emitStatus({ state: 'connected', detail: brokerEndpoint(config) })
+      }
+    })
+    client.on('reconnect', () => {
+      if (this.webClient === client) this.emitStatus({ state: 'reconnecting' })
+    })
+    client.on('offline', () => {
+      if (this.webClient === client) this.emitStatus({ state: 'offline' })
+    })
     client.on('close', () => {
       if (this.webClient === client) this.emitStatus({ state: 'disconnected' })
     })
-    client.on('error', (error) =>
-      this.emitStatus({ state: 'error', detail: error.message })
-    )
+    client.on('error', (error) => {
+      if (this.webClient === client) {
+        this.emitStatus({ state: 'error', detail: error.message })
+      }
+    })
     client.on('packetsend', (packet) => {
+      if (this.webClient !== client) return
       const event = createMqttPacketEvent(packet, 'sent')
       if (event) this.emitPacket(event)
     })
     client.on('packetreceive', (packet) => {
+      if (this.webClient !== client) return
       const event = createMqttPacketEvent(packet, 'received')
       if (event) this.emitPacket(event)
     })
     client.on('message', (topic, payload, packet) => {
+      if (this.webClient !== client) return
       const bytes = new Uint8Array(payload)
       this.emitMessage({
         id: createId(),

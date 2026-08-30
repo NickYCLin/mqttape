@@ -41,6 +41,11 @@ type SecureClientOptions = IClientOptions & {
   wsOptions?: { headers?: Record<string, string> }
 }
 
+function forceCloseClient(client: MqttClient): void {
+  client.end(true)
+  client.stream.destroy()
+}
+
 export function buildBrokerUrl(config: ConnectionConfig): string {
   const rawHost = config.host.trim()
   const host = rawHost.includes(':') && !rawHost.startsWith('[') ? `[${rawHost}]` : rawHost
@@ -109,6 +114,7 @@ export async function createClientOptions(config: ConnectionConfig): Promise<ICl
 
 export class MqttService {
   private client: MqttClient | undefined
+  private abortPendingConnect: (() => void) | undefined
   // Bumped by every disconnect so an in-flight connect can tell that the
   // session moved on while it was reading TLS files off disk.
   private connectEpoch = 0
@@ -156,9 +162,7 @@ export class MqttService {
 
     await new Promise<void>((resolve, reject) => {
       const timeout = setTimeout(() => {
-        cleanup()
-        client.end(true)
-        reject(new Error('Connection timed out after 15 seconds.'))
+        rejectConnection(new Error('Connection timed out after 15 seconds.'))
       }, 15_000)
 
       const handleConnect = (): void => {
@@ -167,8 +171,24 @@ export class MqttService {
       }
 
       const handleError = (error: Error): void => {
+        rejectConnection(error)
+      }
+
+      const handleClose = (): void => {
+        rejectConnection(
+          new Error('The MQTT session was closed before the connection started.'),
+          false
+        )
+      }
+
+      const abort = (): void => {
+        rejectConnection(new Error('The MQTT session was closed before the connection started.'))
+      }
+
+      const rejectConnection = (error: Error, forceClose = true): void => {
         cleanup()
-        client.end(true)
+        if (this.client === client) this.client = undefined
+        if (forceClose) forceCloseClient(client)
         reject(error)
       }
 
@@ -176,25 +196,44 @@ export class MqttService {
         clearTimeout(timeout)
         client.off('connect', handleConnect)
         client.off('error', handleError)
+        client.off('close', handleClose)
+        if (this.abortPendingConnect === abort) this.abortPendingConnect = undefined
       }
 
+      this.abortPendingConnect = abort
       client.once('connect', handleConnect)
       client.once('error', handleError)
+      client.once('close', handleClose)
     })
   }
 
   async disconnect(): Promise<void> {
     this.connectEpoch += 1
+    const abortPendingConnect = this.abortPendingConnect
+    if (abortPendingConnect) {
+      abortPendingConnect()
+      this.statusListener({ state: 'disconnected' })
+      return
+    }
     const client = this.client
     this.client = undefined
 
     if (!client) return
 
     await new Promise<void>((resolve) => {
-      const timeout = setTimeout(resolve, 2_000)
-      client.end(false, {}, () => {
+      let settled = false
+      const finish = (): void => {
+        if (settled) return
+        settled = true
         clearTimeout(timeout)
         resolve()
+      }
+      const timeout = setTimeout(() => {
+        forceCloseClient(client)
+        finish()
+      }, 2_000)
+      client.end(false, {}, () => {
+        finish()
       })
     })
     this.statusListener({ state: 'disconnected' })
@@ -279,10 +318,15 @@ export class MqttService {
 
   private bindEvents(client: MqttClient, config: ConnectionConfig): void {
     client.on('connect', () => {
+      if (this.client !== client) return
       this.statusListener({ state: 'connected', detail: this.describeEndpoint(config) })
     })
-    client.on('reconnect', () => this.statusListener({ state: 'reconnecting' }))
-    client.on('offline', () => this.statusListener({ state: 'offline' }))
+    client.on('reconnect', () => {
+      if (this.client === client) this.statusListener({ state: 'reconnecting' })
+    })
+    client.on('offline', () => {
+      if (this.client === client) this.statusListener({ state: 'offline' })
+    })
     client.on('close', () => {
       if (this.client === client) this.statusListener({ state: 'disconnected' })
     })
@@ -290,14 +334,17 @@ export class MqttService {
       if (this.client === client) this.statusListener({ state: 'error', detail: error.message })
     })
     client.on('packetsend', (packet) => {
+      if (this.client !== client) return
       const event = createMqttPacketEvent(packet, 'sent')
       if (event) this.packetListener(event)
     })
     client.on('packetreceive', (packet) => {
+      if (this.client !== client) return
       const event = createMqttPacketEvent(packet, 'received')
       if (event) this.packetListener(event)
     })
     client.on('message', (topic, payload, packet) => {
+      if (this.client !== client) return
       this.messageListener(this.toIncomingMessage(topic, payload, packet))
     })
   }
