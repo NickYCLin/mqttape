@@ -1,6 +1,6 @@
 {
   "name": "mqttape",
-  "version": "0.12.1",
+  "version": "0.13.0",
   "description": "Capture, inspect, and replay MQTT traffic.",
   "engines": {
     "node": ">=22.12.0",

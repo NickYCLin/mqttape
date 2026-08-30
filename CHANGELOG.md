@@ -6,7 +6,20 @@
 
 ## 未發布
 
+---
+
+## [0.13.0](https://github.com/NickYCLin/mqttape/compare/v0.12.1...v0.13.0) (2026-08-30)
+
+### 🚀 新增功能
+* **Microsoft Store MSIX 發布管道**：
+  - 新增 Windows x64 與 ARM64 原生 MSIX 建置、Manifest／架構／圖示驗證、SHA-256 清單，以及多架構 `.msixbundle` submission artifact。
+  - Store 套件採四段版本規則；MQTTape `0.13.0` 對應 Store `1.13.0.0`，並會在 Store 執行環境停用 GitHub `electron-updater`。
+  - 補齊繁中與英文 listing、8 張本地化真實應用程式截圖、可重跑的截圖腳本、公開雙語隱私頁與 `runFullTrust` 說明；Partner Center 上傳、審查、certification 與實機驗收仍須由維護者完成。
+
 ### 🛠️ 問題修正與優化
+* **MQTT 操作逾時與復原**：
+  - 發布、訂閱與取消訂閱若 15 秒內未取得 Broker 確認，會取消所有等待操作、隔離並強制關閉失效 Client，不再讓介面永久停留在忙碌狀態。
+  - 連線中或其他操作尚未完成時仍可按下中斷連線；Disconnect／Destroy 會立即取消等待工作，而且延遲抵達的 callback 不會產生假成功訊息。
 * **MQTT 連線參數驗證**：
   - 桌面版與 Web Lite 現在會在連線前一致驗證 Broker 連接埠與 Keep Alive 範圍，並顯示對應的繁體中文錯誤。
   - 關閉 Clean Session 時必須提供 Client ID，並拒絕會讓 Node.js 計時器溢位的重連間隔與型別損壞的連線資料。
@@ -14,16 +27,26 @@
 * **Web Lite Broker 設定檔復原**：
   - 單筆損壞或重複的瀏覽器設定檔不再隱藏其他正常設定檔，載入與寫入時也會重新移除所有機密值與桌面專用路徑。
   - 與桌面版一致限制最多載入及儲存 100 筆設定檔，避免損壞的本機資料無限制灌入介面。
+  - 連接埠、Keep Alive、重連計時器、持久工作階段、WebSocket 與 Last Will 必須通過實際連線規則，才會寫入瀏覽器儲存空間。
 * **桌面 Broker 設定檔防護**：
   - 讀取設定檔時先隔離核心欄位型別損壞的項目，避免選取後造成工作階段介面無法渲染。
   - 正規化並去除重複的設定檔 ID、限制最多載入 100 筆，且不再信任型別損壞的 TLS 路徑。
   - 損壞的 Last Will 會在讀取時隔離，桌面 IPC 也會在存檔與檢查 TLS 路徑前拒絕型別異常的設定檔資料。
+  - 儲存前完整驗證連線範圍、持久 Client ID、WebSocket／Last Will 語意、TLS 協定與 Client Certificate／Private Key 配對，避免留下永久無法使用的設定檔。
 * **連線中止與工作階段隔離**：
   - 關閉仍在載入或交握中的工作階段時會立即中止連線，避免 Web Lite 建立隱藏 Client，並阻止舊 Client 的封包與狀態事件污染後續連線。
   - 桌面版與 Web Lite 的正常斷線若未在兩秒內完成，現在會真正強制關閉底層連線，而非只停止等待。
 * **擷取檔匯入防護**：
   - 匯入時驗證匯出時間、連線中繼資料、合法 Topic 與不重複的訊息 ID，並限制為程式實際保留的 5,000 筆訊息，避免損壞檔案造成清單鍵衝突或異常負載。
+  - 連線中繼資料只接受 v1 格式允許的安全欄位；顯示用 Payload 文字也必須與 Base64 原始 bytes 的 UTF-8 解碼完全一致，避免畫面與實際重播內容不同。
   - 桌面主程序會在開啟存檔對話框前重新驗證擷取內容，避免 IPC 邊界繞過渲染程序的格式保證。
+* **發布產物與供應鏈驗證**：
+  - GitHub Release 現在會檢查 Windows、macOS 與 Linux 套件格式，並在六組原生 Runner 實際啟動封裝後應用程式。
+  - GitHub Actions 相依項目固定到完整 Commit SHA，降低可變 Tag 帶來的供應鏈風險。
+* **工作階段識別碼安全性**：
+  - 移除可預測的 `Math.random` 備援，工作階段識別碼統一使用密碼學安全亂數。
+* **Web Lite 可探索性與專案導覽**：
+  - 補上搜尋與分享 Metadata、結構化資料、Sitemap、`llms.txt`、英文摘要及程式碼導覽，並把隱私權頁納入公開索引。
 * **執行環境與相依套件**：
   - 升級 Electron 44、CBOR 解碼器與開發工具，並明確要求 Node.js 22.12 以上。
   - 升級 Protobuf.js 8.8，納入解析長度、遞迴深度與文字格式的防護修正。
