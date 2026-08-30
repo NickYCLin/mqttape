@@ -34,7 +34,15 @@ describe('MQTT connection config', () => {
     expect(isConnectionConfigCore(config())).toBe(true)
     expect(isConnectionConfigCore(config({ protocol: 'mqtt' }), ['ws', 'wss'])).toBe(false)
     expect(isConnectionConfigCore({ ...config(), host: 127 })).toBe(false)
+    expect(isConnectionConfigCore(config({ host: '  ' }))).toBe(false)
+    expect(isConnectionConfigCore(config({ port: 0 }))).toBe(false)
+    expect(isConnectionConfigCore(config({ port: 1.5 }))).toBe(false)
+    expect(isConnectionConfigCore(config({ keepalive: -1 }))).toBe(false)
     expect(isConnectionConfigCore({ ...config(), reconnectPeriod: '1000' })).toBe(false)
+    expect(isConnectionConfigCore(config({
+      reconnectPeriod: MAX_MQTT_RECONNECT_PERIOD + 1
+    }))).toBe(false)
+    expect(isConnectionConfigCore(config({ clean: false, clientId: '  ' }))).toBe(false)
   })
 
   it('accepts the MQTT Keep Alive boundary values', () => {

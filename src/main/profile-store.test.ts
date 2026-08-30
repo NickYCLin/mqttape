@@ -57,6 +57,12 @@ describe('ProfileStore', () => {
       profiles: [
         { id: 'valid', config: config() },
         { id: 'invalid-host', config: { ...config(), host: 127 } },
+        { id: 'invalid-port', config: { ...config(), port: 0 } },
+        { id: 'invalid-keepalive', config: { ...config(), keepalive: -1 } },
+        {
+          id: 'invalid-persistent-session',
+          config: { ...config(), clean: false, clientId: '' }
+        },
         { id: 'invalid-protocol', config: { ...config(), protocol: 'ftp' } },
         { id: 'invalid-will', config: { ...config(), will: 'broken' } }
       ]
@@ -86,6 +92,28 @@ describe('ProfileStore', () => {
       .rejects.toThrow('Broker profile data is invalid.')
     await expect(store.save({ config: { ...config(), will: { enabled: true } } } as never))
       .rejects.toThrow('Broker profile data is invalid.')
+    await expect(store.save({ config: { ...config(), port: 0 } }))
+      .rejects.toThrow('Broker profile data is invalid.')
+    await expect(store.save({ config: {
+      ...config(),
+      protocol: 'mqtt',
+      caPath: 'C:/certs/ca.pem',
+      clientCertificatePath: '',
+      clientKeyPath: ''
+    } })).rejects.toThrow('Custom TLS files require mqtts or wss.')
+    await expect(store.save({ config: {
+      ...config(),
+      clientKeyPath: ''
+    } })).rejects.toThrow('Client certificate and private key must be selected together.')
+    await expect(store.save({ config: {
+      ...config(),
+      protocol: 'wss',
+      websocketHeaders: [{ name: 'Host', value: 'broker.example.com' }]
+    } })).rejects.toThrow('cannot be overridden')
+    await expect(store.save({ config: {
+      ...config(),
+      will: { ...config().will!, topic: 'devices/+' }
+    } })).rejects.toThrow('Last Will topics cannot contain MQTT wildcards')
   })
 
   it('normalizes profile identities, removes duplicates, and bounds stored data', async () => {

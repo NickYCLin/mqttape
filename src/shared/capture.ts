@@ -1,5 +1,6 @@
 import type { CaptureFile, MqttMessageRecord } from './contracts'
-import { decodePayloadBytes, filterMessages } from './message'
+import { MAX_MQTT_KEEPALIVE, MAX_MQTT_RECONNECT_PERIOD } from './connection-config'
+import { decodePayload, decodePayloadBytes, filterMessages } from './message'
 import { isMqttMessageProperties } from './mqtt-properties'
 import { publishTopicError } from './mqtt-topic'
 
@@ -16,6 +17,65 @@ export interface CaptureTrimOptions {
 export interface CaptureTrimPlan {
   messages: MqttMessageRecord[]
   error?: string
+}
+
+const CAPTURE_CONNECTION_FIELDS = new Set([
+  'name',
+  'protocol',
+  'host',
+  'port',
+  'path',
+  'clientId',
+  'username',
+  'mqttVersion',
+  'clean',
+  'keepalive',
+  'reconnectPeriod',
+  'rejectUnauthorized'
+])
+
+function isCaptureConnection(value: unknown): boolean {
+  if (!value || typeof value !== 'object' || Array.isArray(value)) return false
+  const connection = value as Record<string, unknown>
+  if (Object.keys(connection).some((field) => !CAPTURE_CONNECTION_FIELDS.has(field))) return false
+  const optionalStringFields = ['name', 'host', 'path', 'clientId', 'username'] as const
+  if (optionalStringFields.some((field) =>
+    connection[field] !== undefined && typeof connection[field] !== 'string'
+  )) return false
+  if (
+    connection.protocol !== undefined &&
+    connection.protocol !== 'mqtt' &&
+    connection.protocol !== 'mqtts' &&
+    connection.protocol !== 'ws' &&
+    connection.protocol !== 'wss'
+  ) return false
+  if (
+    connection.port !== undefined &&
+    (!Number.isInteger(connection.port) || Number(connection.port) < 1 || Number(connection.port) > 65_535)
+  ) return false
+  if (
+    connection.mqttVersion !== undefined &&
+    connection.mqttVersion !== 4 &&
+    connection.mqttVersion !== 5
+  ) return false
+  if (connection.clean !== undefined && typeof connection.clean !== 'boolean') return false
+  if (
+    connection.keepalive !== undefined &&
+    (!Number.isInteger(connection.keepalive) ||
+      Number(connection.keepalive) < 0 ||
+      Number(connection.keepalive) > MAX_MQTT_KEEPALIVE)
+  ) return false
+  if (
+    connection.reconnectPeriod !== undefined &&
+    (!Number.isInteger(connection.reconnectPeriod) ||
+      Number(connection.reconnectPeriod) < 0 ||
+      Number(connection.reconnectPeriod) > MAX_MQTT_RECONNECT_PERIOD)
+  ) return false
+  if (
+    connection.rejectUnauthorized !== undefined &&
+    typeof connection.rejectUnauthorized !== 'boolean'
+  ) return false
+  return true
 }
 
 function captureBoundary(value: string | undefined, label: string): { time?: number; error?: string } {
@@ -58,9 +118,7 @@ export function isCaptureFile(value: unknown): value is CaptureFile {
     return false
   }
   if (
-    !candidate.connection ||
-    typeof candidate.connection !== 'object' ||
-    Array.isArray(candidate.connection) ||
+    !isCaptureConnection(candidate.connection) ||
     !Array.isArray(candidate.messages) ||
     candidate.messages.length > MAX_CAPTURE_MESSAGES
   ) {
@@ -93,7 +151,8 @@ export function isCaptureFile(value: unknown): value is CaptureFile {
     messageIds.add(message.id)
 
     try {
-      return decodePayloadBytes(message.payloadBase64).byteLength === message.size
+      return decodePayloadBytes(message.payloadBase64).byteLength === message.size &&
+        decodePayload(message.payloadBase64) === message.payloadText
     } catch {
       return false
     }

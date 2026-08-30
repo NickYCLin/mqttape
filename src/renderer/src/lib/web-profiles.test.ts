@@ -96,6 +96,10 @@ describe('Web broker profiles', () => {
       { id: '', config: config() },
       { id: 'missing-config' },
       { id: 'invalid-port', config: { ...config(), port: '1883' } },
+      { id: 'out-of-range-port', config: { ...config(), port: 0 } },
+      { id: 'invalid-keepalive', config: { ...config(), keepalive: -1 } },
+      { id: 'timer-overflow', config: { ...config(), reconnectPeriod: 2_147_483_648 } },
+      { id: 'persistent-without-id', config: { ...config(), clean: false, clientId: '' } },
       profile('valid'),
       profile('valid', { name: 'Duplicate' })
     ]))
@@ -115,5 +119,20 @@ describe('Web broker profiles', () => {
     expect(() => writeWebProfiles(storage(), profiles)).toThrow(
       'A maximum of 100 broker profiles is supported.'
     )
+  })
+
+  it('refuses to persist profiles that cannot connect', () => {
+    expect(() => writeWebProfiles(storage(), [profile('invalid', { port: 0 })]))
+      .toThrow('Broker port must be a whole number from 1 to 65535.')
+    expect(() => writeWebProfiles(storage(), [profile('invalid', {
+      clean: false,
+      clientId: ''
+    })])).toThrow('Client ID is required when Clean Session is disabled.')
+    expect(() => writeWebProfiles(storage(), [profile('invalid', {
+      websocketQueryParameters: [{ name: '', value: 'value' }]
+    })])).toThrow('WebSocket query parameter names are required.')
+    expect(() => writeWebProfiles(storage(), [profile('invalid', {
+      will: { ...config().will!, topic: 'devices/+' }
+    })])).toThrow('Last Will topics cannot contain MQTT wildcards')
   })
 })

@@ -112,6 +112,11 @@ describe('capture validation', () => {
 
     expect(isCaptureFile({ ...capture, exportedAt: 'not-a-date' })).toBe(false)
     expect(isCaptureFile({ ...capture, connection: [] })).toBe(false)
+    expect(isCaptureFile({ ...capture, connection: { host: {} } })).toBe(false)
+    expect(isCaptureFile({ ...capture, connection: { password: 'must-not-be-exported' } }))
+      .toBe(false)
+    expect(isCaptureFile({ ...capture, connection: { port: 0 } })).toBe(false)
+    expect(isCaptureFile({ ...capture, connection: { mqttVersion: 3 } })).toBe(false)
     expect(isCaptureFile({ ...capture, messages: [{ ...validMessage, id: '  ' }] })).toBe(false)
     expect(isCaptureFile({ ...capture, messages: [validMessage, validMessage] })).toBe(false)
     expect(isCaptureFile({
@@ -151,6 +156,10 @@ describe('capture validation', () => {
     expect(isCaptureFile({
       ...capture,
       messages: [{ ...capture.messages[0], size: 5 }]
+    })).toBe(false)
+    expect(isCaptureFile({
+      ...capture,
+      messages: [{ ...capture.messages[0], payloadText: '\u0000B� ~\n' }]
     })).toBe(false)
   })
 

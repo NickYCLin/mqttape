@@ -164,7 +164,10 @@ function registerIpcHandlers(profileStore: ProfileStore, updater: UpdateService)
   ipcMain.handle(
     'mqttape:save-profile',
     async (_event, request: SaveBrokerProfileRequest) => {
-      await assertTrustedTlsPaths(request.config, profileStore)
+      const config = request && typeof request === 'object' ? request.config : undefined
+      const connectionError = mqttConnectionConfigError(config)
+      if (connectionError) throw new Error(connectionError)
+      await assertTrustedTlsPaths(config as ConnectionConfig, profileStore)
       return profileStore.save(request)
     }
   )

@@ -9,7 +9,13 @@ import type {
   MqttWebSocketNameValue,
   SaveBrokerProfileRequest
 } from '../shared/contracts'
-import { isConnectionConfigCore, MAX_BROKER_PROFILES } from '../shared/connection-config'
+import {
+  isConnectionConfigCore,
+  MAX_BROKER_PROFILES,
+  mqttConnectionConfigError
+} from '../shared/connection-config'
+import { mqttLastWillError } from '../shared/mqtt-will'
+import { webSocketConnectionError } from '../shared/websocket-auth'
 
 interface SecretProtector {
   isAvailable(): boolean
@@ -234,6 +240,20 @@ export class ProfileStore {
     if (!isSaveProfileRequest(request)) throw new Error('Broker profile data is invalid.')
     const profileName = request.config.name.trim()
     if (!profileName) throw new Error('Profile name is required.')
+    const configError = mqttConnectionConfigError(request.config) ??
+      webSocketConnectionError(request.config, true) ??
+      mqttLastWillError(request.config.will, request.config.mqttVersion)
+    if (configError) throw new Error(configError)
+    const secureProtocol = request.config.protocol === 'mqtts' || request.config.protocol === 'wss'
+    if (
+      !secureProtocol &&
+      (request.config.caPath || request.config.clientCertificatePath || request.config.clientKeyPath)
+    ) {
+      throw new Error('Custom TLS files require mqtts or wss.')
+    }
+    if (Boolean(request.config.clientCertificatePath) !== Boolean(request.config.clientKeyPath)) {
+      throw new Error('Client certificate and private key must be selected together.')
+    }
 
     const profiles = await this.readStoredProfiles()
     const requestedId = request.id?.trim()

@@ -222,6 +222,7 @@ test('Web Lite configures URL authentication without persisting secret values', 
   await page.goto('/')
   await selectEnglish(page)
   await page.getByLabel('Profile name').fill('Query auth profile')
+  await page.getByLabel('Host').fill('broker.example.com')
   await page.getByText('Advanced settings').click()
 
   await expect(page.getByRole('note').filter({ hasText: 'Browser handshake limitation' }))

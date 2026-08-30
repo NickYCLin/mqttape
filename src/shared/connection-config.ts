@@ -30,15 +30,19 @@ export function isConnectionConfigCore(
   return Boolean(
     typeof config.name === 'string' && config.name.trim() &&
     allowedProtocols.includes(config.protocol as MqttProtocol) &&
-    typeof config.host === 'string' &&
-    typeof config.port === 'number' && Number.isFinite(config.port) &&
+    typeof config.host === 'string' && config.host.trim() &&
+    Number.isInteger(config.port) && Number(config.port) >= 1 && Number(config.port) <= 65_535 &&
     typeof config.path === 'string' &&
     typeof config.clientId === 'string' &&
     typeof config.username === 'string' &&
     (config.mqttVersion === 4 || config.mqttVersion === 5) &&
     typeof config.clean === 'boolean' &&
-    typeof config.keepalive === 'number' && Number.isFinite(config.keepalive) &&
-    typeof config.reconnectPeriod === 'number' && Number.isFinite(config.reconnectPeriod) &&
+    (config.clean || Boolean(config.clientId.trim())) &&
+    Number.isInteger(config.keepalive) &&
+    Number(config.keepalive) >= 0 && Number(config.keepalive) <= MAX_MQTT_KEEPALIVE &&
+    Number.isInteger(config.reconnectPeriod) &&
+    Number(config.reconnectPeriod) >= 0 &&
+    Number(config.reconnectPeriod) <= MAX_MQTT_RECONNECT_PERIOD &&
     typeof config.rejectUnauthorized === 'boolean'
   )
 }

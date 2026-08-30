@@ -5,8 +5,16 @@ import type {
   MqttWebSocketAuth,
   MqttWebSocketNameValue
 } from '../../../shared/contracts'
-import { isConnectionConfigCore, MAX_BROKER_PROFILES } from '../../../shared/connection-config'
-import { defaultMqttWebSocketAuth } from '../../../shared/websocket-auth'
+import {
+  isConnectionConfigCore,
+  MAX_BROKER_PROFILES,
+  mqttConnectionConfigError
+} from '../../../shared/connection-config'
+import { defaultMqttLastWill, mqttLastWillError } from '../../../shared/mqtt-will'
+import {
+  defaultMqttWebSocketAuth,
+  webSocketConnectionError
+} from '../../../shared/websocket-auth'
 
 export const WEB_PROFILE_STORAGE_KEY = 'mqttape:profiles:v1'
 
@@ -118,6 +126,21 @@ export function readWebProfiles(storage: ProfileReader): BrokerProfile[] {
 export function writeWebProfiles(storage: ProfileWriter, profiles: BrokerProfile[]): void {
   if (profiles.length > MAX_BROKER_PROFILES) {
     throw new Error(`A maximum of ${MAX_BROKER_PROFILES} broker profiles is supported.`)
+  }
+  for (const profile of profiles) {
+    if (!profile || typeof profile.id !== 'string' || !profile.id.trim()) {
+      throw new Error('Broker profile data is invalid.')
+    }
+    const configError = mqttConnectionConfigError(profile.config) ??
+      (profile.config.protocol !== 'ws' && profile.config.protocol !== 'wss'
+        ? 'Web Lite profiles require ws or wss.'
+        : undefined) ??
+      webSocketConnectionError(profile.config, true) ??
+      mqttLastWillError(
+        profile.config.will ?? defaultMqttLastWill(),
+        profile.config.mqttVersion
+      )
+    if (configError) throw new Error(configError)
   }
   const safeProfiles = profiles.map((profile) => ({
     id: profile.id,
