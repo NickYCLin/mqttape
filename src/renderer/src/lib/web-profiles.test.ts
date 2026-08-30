@@ -108,4 +108,12 @@ describe('Web broker profiles', () => {
     expect(readWebProfiles({ getItem: () => '{invalid-json' })).toEqual([])
     expect(readWebProfiles({ getItem: () => { throw new Error('blocked') } })).toEqual([])
   })
+
+  it('limits Web profiles on both read and write', () => {
+    const profiles = Array.from({ length: 101 }, (_value, index) => profile(`profile-${index}`))
+    expect(readWebProfiles(storage(profiles))).toHaveLength(100)
+    expect(() => writeWebProfiles(storage(), profiles)).toThrow(
+      'A maximum of 100 broker profiles is supported.'
+    )
+  })
 })

@@ -71,6 +71,36 @@ describe('ProfileStore', () => {
     expect(loaded[0].config.host).toBe('broker.example.com')
   })
 
+  it('normalizes profile identities, removes duplicates, and bounds stored data', async () => {
+    const directory = await mkdtemp(join(tmpdir(), 'mqttape-profile-'))
+    temporaryDirectories.push(directory)
+    const filePath = join(directory, 'profiles.json')
+    await writeFile(filePath, JSON.stringify({
+      version: 1,
+      profiles: [
+        { id: ' duplicate ', config: { ...config(), caPath: 42 } },
+        { id: 'duplicate', config: { ...config(), name: 'Duplicate copy' } },
+        { id: '   ', config: config() },
+        ...Array.from({ length: 105 }, (_value, index) => ({
+          id: `profile-${index}`,
+          config: { ...config(), name: `Profile ${index}` }
+        }))
+      ]
+    }))
+    const store = new ProfileStore(filePath, {
+      isAvailable: () => false,
+      encrypt: () => Buffer.alloc(0),
+      decrypt: () => ''
+    })
+
+    const loaded = await store.list()
+    expect(loaded).toHaveLength(100)
+    expect(loaded.filter(({ id }) => id === 'duplicate')).toHaveLength(1)
+    expect(loaded[0].config.name).toBe('Production broker')
+    expect(loaded[0].config.caPath).toBe('')
+    expect(loaded.some(({ id }) => id.trim() === '')).toBe(false)
+  })
+
   it('encrypts secrets and restores the profile', async () => {
     const directory = await mkdtemp(join(tmpdir(), 'mqttape-profile-'))
     temporaryDirectories.push(directory)

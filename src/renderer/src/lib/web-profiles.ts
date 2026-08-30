@@ -5,7 +5,7 @@ import type {
   MqttWebSocketAuth,
   MqttWebSocketNameValue
 } from '../../../shared/contracts'
-import { isConnectionConfigCore } from '../../../shared/connection-config'
+import { isConnectionConfigCore, MAX_BROKER_PROFILES } from '../../../shared/connection-config'
 import { defaultMqttWebSocketAuth } from '../../../shared/websocket-auth'
 
 export const WEB_PROFILE_STORAGE_KEY = 'mqttape:profiles:v1'
@@ -107,6 +107,7 @@ export function readWebProfiles(storage: ProfileReader): BrokerProfile[] {
       if (!profile || ids.has(profile.id)) continue
       ids.add(profile.id)
       profiles.push(profile)
+      if (profiles.length === MAX_BROKER_PROFILES) break
     }
     return profiles
   } catch {
@@ -115,6 +116,9 @@ export function readWebProfiles(storage: ProfileReader): BrokerProfile[] {
 }
 
 export function writeWebProfiles(storage: ProfileWriter, profiles: BrokerProfile[]): void {
+  if (profiles.length > MAX_BROKER_PROFILES) {
+    throw new Error(`A maximum of ${MAX_BROKER_PROFILES} broker profiles is supported.`)
+  }
   const safeProfiles = profiles.map((profile) => ({
     id: profile.id,
     config: webSafeConfig(profile.config),

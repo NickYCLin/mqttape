@@ -1,6 +1,7 @@
 import type { ConnectionConfig, MqttProtocol } from './contracts'
 
 export const MAX_MQTT_KEEPALIVE = 65_535
+export const MAX_BROKER_PROFILES = 100
 const MQTT_PROTOCOLS: readonly MqttProtocol[] = ['mqtt', 'mqtts', 'ws', 'wss']
 
 export type ConnectionConfigCore = Pick<

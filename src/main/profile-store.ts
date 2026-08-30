@@ -9,7 +9,7 @@ import type {
   MqttWebSocketNameValue,
   SaveBrokerProfileRequest
 } from '../shared/contracts'
-import { isConnectionConfigCore } from '../shared/connection-config'
+import { isConnectionConfigCore, MAX_BROKER_PROFILES } from '../shared/connection-config'
 
 interface SecretProtector {
   isAvailable(): boolean
@@ -54,6 +54,8 @@ interface ProfileSecrets {
   websocketHeaderValues: string[]
   websocketQueryParameterValues: string[]
 }
+
+const MAX_BROKER_PROFILE_ID_LENGTH = 128
 
 function withoutSecrets(
   config: ConnectionConfig
@@ -106,16 +108,21 @@ function normalizeStoredWebSocketAuth(value: unknown): StoredWebSocketAuth | und
 function normalizeStoredProfile(value: unknown): StoredProfile | null {
   if (!value || typeof value !== 'object') return null
   const candidate = value as Partial<StoredProfile>
-  if (typeof candidate.id !== 'string' || !candidate.id || !candidate.config) return null
+  const id = typeof candidate.id === 'string' ? candidate.id.trim() : ''
+  if (!id || id.length > MAX_BROKER_PROFILE_ID_LENGTH || !candidate.config) return null
   if (!isConnectionConfigCore(candidate.config)) return null
 
   return {
-    id: candidate.id,
+    id,
     config: {
       ...candidate.config,
-      caPath: candidate.config.caPath ?? '',
-      clientCertificatePath: candidate.config.clientCertificatePath ?? '',
-      clientKeyPath: candidate.config.clientKeyPath ?? '',
+      caPath: typeof candidate.config.caPath === 'string' ? candidate.config.caPath : '',
+      clientCertificatePath: typeof candidate.config.clientCertificatePath === 'string'
+        ? candidate.config.clientCertificatePath
+        : '',
+      clientKeyPath: typeof candidate.config.clientKeyPath === 'string'
+        ? candidate.config.clientKeyPath
+        : '',
       websocketAuth: normalizeStoredWebSocketAuth(candidate.config.websocketAuth),
       websocketHeaders: normalizeStoredNameValues(candidate.config.websocketHeaders),
       websocketQueryParameters: normalizeStoredNameValues(
@@ -144,7 +151,13 @@ export class ProfileStore {
     if (!profileName) throw new Error('Profile name is required.')
 
     const profiles = await this.readStoredProfiles()
-    const id = request.id || randomUUID()
+    const requestedId = request.id?.trim()
+    if (request.id !== undefined && (
+      !requestedId || requestedId.length > MAX_BROKER_PROFILE_ID_LENGTH
+    )) {
+      throw new Error('Profile identifier is invalid.')
+    }
+    const id = requestedId || randomUUID()
     const existingIndex = profiles.findIndex((profile) => profile.id === id)
     const secrets: ProfileSecrets = {
       password: request.config.password,
@@ -177,7 +190,9 @@ export class ProfileStore {
 
     if (existingIndex >= 0) profiles[existingIndex] = stored
     else profiles.push(stored)
-    if (profiles.length > 100) throw new Error('A maximum of 100 broker profiles is supported.')
+    if (profiles.length > MAX_BROKER_PROFILES) {
+      throw new Error(`A maximum of ${MAX_BROKER_PROFILES} broker profiles is supported.`)
+    }
 
     await this.writeStoredProfiles(profiles)
     return this.toBrokerProfile(stored)
@@ -205,9 +220,16 @@ export class ProfileStore {
       if (!parsed || typeof parsed !== 'object') return []
       const file = parsed as Partial<StoredProfileFile>
       if (file.version !== 1 || !Array.isArray(file.profiles)) return []
-      return file.profiles
-        .map(normalizeStoredProfile)
-        .filter((profile): profile is StoredProfile => profile !== null)
+      const profiles: StoredProfile[] = []
+      const ids = new Set<string>()
+      for (const value of file.profiles) {
+        const profile = normalizeStoredProfile(value)
+        if (!profile || ids.has(profile.id)) continue
+        ids.add(profile.id)
+        profiles.push(profile)
+        if (profiles.length === MAX_BROKER_PROFILES) break
+      }
+      return profiles
     } catch (reason) {
       if ((reason as NodeJS.ErrnoException).code === 'ENOENT') return []
       throw new Error('Broker profiles could not be read.', { cause: reason })
