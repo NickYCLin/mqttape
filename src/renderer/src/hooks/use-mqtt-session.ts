@@ -115,6 +115,7 @@ export function useMqttSession(sessionId = 'default') {
   const [subscriptions, setSubscriptions] = useState<Map<string, MqttQos>>(new Map())
   const [error, setError] = useState('')
   const [busy, setBusy] = useState(false)
+  const busyOperationsRef = useRef(0)
   const [profiles, setProfiles] = useState<BrokerProfile[]>([])
   const [selectedProfileId, setSelectedProfileId] = useState('')
   const [replayProgress, setReplayProgress] = useState<ReplayProgress>(idleReplay)
@@ -177,6 +178,7 @@ export function useMqttSession(sessionId = 'default') {
   }, [])
 
   const run = useCallback(async (operation: () => Promise<void>): Promise<boolean> => {
+    busyOperationsRef.current += 1
     setBusy(true)
     setError('')
     try {
@@ -186,7 +188,8 @@ export function useMqttSession(sessionId = 'default') {
       setError(reason instanceof Error ? reason.message : String(reason))
       return false
     } finally {
-      setBusy(false)
+      busyOperationsRef.current = Math.max(0, busyOperationsRef.current - 1)
+      if (busyOperationsRef.current === 0) setBusy(false)
     }
   }, [])
 

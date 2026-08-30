@@ -4,6 +4,7 @@ import { Aedes } from 'aedes'
 import { afterAll, beforeAll, describe, expect, it } from 'vitest'
 import { createWebSocketStream, WebSocketServer } from 'ws'
 import mqtt from 'mqtt'
+import { generate, parser, type Packet } from 'mqtt-packet'
 import type { ConnectionConfig, MqttMessageRecord, MqttPacketEvent, StatusEvent } from '../../../shared/contracts'
 import { MqttController } from './mqtt-controller'
 import { defaultMqttLastWill } from '../../../shared/mqtt-will'
@@ -145,6 +146,74 @@ describe('MqttController Web Lite integration', () => {
     removeMessage()
     removePacket()
     controller.destroy()
+  })
+
+  it('times out when a WebSocket broker withholds an operation acknowledgement', async () => {
+    const silentServer = createServer()
+    const silentWebSocketServer = new WebSocketServer({ server: silentServer, path: '/mqtt' })
+    silentWebSocketServer.on('connection', (socket, request) => {
+      const stream = createWebSocketStream(socket)
+      const packetParser = parser({ protocolVersion: 4 })
+      stream.on('data', (data) => packetParser.parse(data))
+      packetParser.on('packet', (packet: Packet) => {
+        if (packet.cmd === 'connect') {
+          stream.write(generate({
+            cmd: 'connack',
+            returnCode: 0,
+            sessionPresent: false
+          }, { protocolVersion: 4 }))
+        } else if (packet.cmd === 'pingreq') {
+          stream.write(generate({ cmd: 'pingresp' }, { protocolVersion: 4 }))
+        }
+        // Deliberately withhold SUBACK.
+      })
+      void request
+    })
+    await new Promise<void>((resolve, reject) => {
+      silentServer.once('error', reject)
+      silentServer.listen(0, '127.0.0.1', resolve)
+    })
+    const silentPort = (silentServer.address() as AddressInfo).port
+    const statuses: StatusEvent[] = []
+    const controller = new MqttController('web_ack_timeout', 100)
+    const removeStatus = controller.onStatus((status) => statuses.push(status))
+
+    try {
+      await controller.connect({
+        name: 'Silent WebSocket broker',
+        protocol: 'ws',
+        host: '127.0.0.1',
+        port: silentPort,
+        path: 'mqtt',
+        clientId: 'mqttape_web_ack_timeout',
+        username: '',
+        password: '',
+        mqttVersion: 4,
+        clean: true,
+        keepalive: 30,
+        reconnectPeriod: 0,
+        rejectUnauthorized: true,
+        caPath: '',
+        clientCertificatePath: '',
+        clientKeyPath: '',
+        clientKeyPassphrase: ''
+      })
+
+      await expect(controller.subscribe({ topic: 'mqttape/no-suback', qos: 1 }))
+        .rejects.toThrow(
+          'Timed out waiting for the broker to acknowledge the MQTT subscription.'
+        )
+      expect(statuses.at(-1)).toEqual({
+        state: 'error',
+        detail: 'Timed out waiting for the broker to acknowledge the MQTT subscription.'
+      })
+    } finally {
+      removeStatus()
+      controller.destroy(true)
+      silentWebSocketServer.clients.forEach((client) => client.terminate())
+      await new Promise<void>((resolve) => silentWebSocketServer.close(() => resolve()))
+      await new Promise<void>((resolve) => silentServer.close(() => resolve()))
+    }
   })
 
   it('keeps simultaneous Broker sessions and their messages isolated', async () => {

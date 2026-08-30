@@ -76,6 +76,7 @@ export function ConnectionPanel({
   const websocketHeaders = config.websocketHeaders ?? []
   const websocketQueryParameters = config.websocketQueryParameters ?? []
   const websocketTransport = config.protocol === 'ws' || config.protocol === 'wss'
+  const disconnectable = connected || connecting
   const updateWill = <Key extends keyof typeof will>(
     key: Key,
     value: (typeof will)[Key]
@@ -697,13 +698,15 @@ export function ConnectionPanel({
         </details>
 
         <button
-          className={`btn block ${connected ? 'danger' : 'primary'}`}
-          type={connected ? 'button' : 'submit'}
-          disabled={busy}
-          onClick={connected ? onDisconnect : undefined}
+          className={`btn block ${disconnectable ? 'danger' : 'primary'}`}
+          type={disconnectable ? 'button' : 'submit'}
+          disabled={busy && !disconnectable}
+          onClick={disconnectable ? onDisconnect : undefined}
         >
-          {connected ? <PowerIcon width={16} height={16} /> : <PlugIcon width={16} height={16} />}
-          {t(connecting ? 'connection.connecting' : connected ? 'connection.disconnect' : 'connection.connect')}
+          {disconnectable
+            ? <PowerIcon width={16} height={16} />
+            : <PlugIcon width={16} height={16} />}
+          {t(disconnectable ? 'connection.disconnect' : 'connection.connect')}
         </button>
       </div>
     </form>

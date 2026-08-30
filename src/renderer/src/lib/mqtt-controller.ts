@@ -27,6 +27,8 @@ import {
 type StatusListener = (event: StatusEvent) => void
 type MessageListener = (message: MqttMessageRecord) => void
 type PacketListener = (event: MqttPacketEvent) => void
+type OperationCancellation = (reason: Error) => void
+type MqttOperation = 'publish' | 'subscription' | 'unsubscription'
 
 function forceCloseClient(client: MqttClient): void {
   client.end(true)
@@ -68,6 +70,7 @@ function brokerUrl(config: ConnectionConfig): string {
 export class MqttController {
   private webClient: MqttClient | undefined
   private abortPendingConnect: (() => void) | undefined
+  private pendingOperations = new Set<OperationCancellation>()
   // Invalidates lazy imports and MQTT handshakes when a Web Lite workspace is
   // disconnected or destroyed before the connection has finished.
   private connectEpoch = 0
@@ -76,7 +79,10 @@ export class MqttController {
   private packetListeners = new Set<PacketListener>()
   private bridgeCleanup: Array<() => void> = []
 
-  constructor(private readonly sessionId: MqttSessionId = 'default') {}
+  constructor(
+    private readonly sessionId: MqttSessionId = 'default',
+    private readonly operationTimeoutMs = 15_000
+  ) {}
 
   activate(): void {
     if (window.mqttape && this.bridgeCleanup.length === 0) {
@@ -243,6 +249,9 @@ export class MqttController {
     const client = this.webClient
     this.webClient = undefined
     if (!client) return
+    this.cancelPendingOperations(
+      new Error('The MQTT operation was cancelled because the session disconnected.')
+    )
 
     await new Promise<void>((resolve, reject) => {
       let settled = false
@@ -266,11 +275,8 @@ export class MqttController {
     if (window.mqttape) return window.mqttape.subscribe(this.sessionId, request)
     const client = this.requireWebClient()
 
-    await new Promise<void>((resolve, reject) => {
-      client.subscribe(request.topic, { qos: request.qos }, (error) => {
-        if (error) reject(error)
-        else resolve()
-      })
+    await this.waitForAcknowledgement(client, 'subscription', (callback) => {
+      client.subscribe(request.topic, { qos: request.qos }, callback)
     })
   }
 
@@ -278,11 +284,8 @@ export class MqttController {
     if (window.mqttape) return window.mqttape.unsubscribe(this.sessionId, topic)
     const client = this.requireWebClient()
 
-    await new Promise<void>((resolve, reject) => {
-      client.unsubscribe(topic, (error) => {
-        if (error) reject(error)
-        else resolve()
-      })
+    await this.waitForAcknowledgement(client, 'unsubscription', (callback) => {
+      client.unsubscribe(topic, callback)
     })
   }
 
@@ -308,44 +311,88 @@ export class MqttController {
       ? Buffer.from(base64ToBytes(request.payloadBase64))
       : Buffer.from(request.payload, 'utf8')
 
-    await new Promise<void>((resolve, reject) => {
-      client.publish(
-        topic,
-        payload,
-        options,
-        (error) => {
-          if (error) {
-            reject(error)
-            return
-          }
-          this.emitMessage({
-            id: createId(),
-            direction: 'outgoing',
-            timestamp: new Date().toISOString(),
-            topic,
-            qos: request.qos,
-            retain: request.retain,
-            duplicate: false,
-            payloadBase64: bytesToBase64(payload),
-            payloadText: request.payloadBase64
-              ? new TextDecoder().decode(payload)
-              : request.payload,
-            size: payload.byteLength,
-            properties: toMqttPublishProperties(request.properties)
-          })
-          resolve()
-        }
-      )
+    await this.waitForAcknowledgement(client, 'publish', (callback) => {
+      client.publish(topic, payload, options, callback)
     })
+    this.emitMessage({
+      id: createId(),
+      direction: 'outgoing',
+      timestamp: new Date().toISOString(),
+      topic,
+      qos: request.qos,
+      retain: request.retain,
+      duplicate: false,
+      payloadBase64: bytesToBase64(payload),
+      payloadText: request.payloadBase64
+        ? new TextDecoder().decode(payload)
+        : request.payload,
+      size: payload.byteLength,
+      properties: toMqttPublishProperties(request.properties)
+    })
+  }
+
+  private async waitForAcknowledgement(
+    client: MqttClient,
+    operation: MqttOperation,
+    start: (callback: (error?: Error | null) => void) => void
+  ): Promise<void> {
+    await new Promise<void>((resolve, reject) => {
+      let settled = false
+      const finish = (error?: Error): void => {
+        if (settled) return
+        settled = true
+        window.clearTimeout(timeout)
+        this.pendingOperations.delete(cancel)
+        if (error) reject(error)
+        else resolve()
+      }
+      const cancel: OperationCancellation = (reason) => finish(reason)
+
+      this.pendingOperations.add(cancel)
+      const timeout = window.setTimeout(() => {
+        const error = new Error(
+          `Timed out waiting for the broker to acknowledge the MQTT ${operation}.`
+        )
+        if (this.webClient === client) {
+          this.webClient = undefined
+          this.cancelPendingOperations(error)
+          forceCloseClient(client)
+          this.emitStatus({ state: 'error', detail: error.message })
+        } else {
+          finish(error)
+        }
+      }, this.operationTimeoutMs)
+
+      try {
+        start((error) => finish(error ?? undefined))
+      } catch (reason) {
+        finish(reason instanceof Error ? reason : new Error(String(reason)))
+      }
+    })
+  }
+
+  private cancelPendingOperations(reason: Error): void {
+    for (const cancel of [...this.pendingOperations]) cancel(reason)
   }
 
   destroy(force = false): void {
     this.connectEpoch += 1
     this.bridgeCleanup.forEach((cleanup) => cleanup())
     this.bridgeCleanup = []
+    const hadPendingOperation = this.pendingOperations.size > 0
+    this.cancelPendingOperations(
+      new Error('The MQTT operation was cancelled because the session disconnected.')
+    )
     if (window.mqttape) void window.mqttape.destroySession(this.sessionId).catch(() => {})
     else if (this.abortPendingConnect) this.abortPendingConnect()
-    else this.webClient?.end(force)
+    else if (this.webClient) {
+      const client = this.webClient
+      if (force || hadPendingOperation) forceCloseClient(client)
+      else {
+        const timeout = window.setTimeout(() => forceCloseClient(client), 2_000)
+        client.end(false, {}, () => window.clearTimeout(timeout))
+      }
+    }
     this.webClient = undefined
   }
 

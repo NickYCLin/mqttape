@@ -2,6 +2,7 @@ import { createServer, type Server, type Socket } from 'node:net'
 import { createServer as createHttpServer } from 'node:http'
 import type { AddressInfo } from 'node:net'
 import { Aedes } from 'aedes'
+import { generate, parser, type Packet } from 'mqtt-packet'
 import { afterAll, beforeAll, describe, expect, it } from 'vitest'
 import { createWebSocketStream, WebSocketServer } from 'ws'
 import type { ConnectionConfig, MqttMessageRecord, MqttPacketEvent, StatusEvent } from '../shared/contracts'
@@ -158,6 +159,74 @@ describe('MqttService integration', () => {
       await service.disconnect()
       stalledSocket?.destroy()
       await new Promise<void>((resolve) => stalledServer.close(() => resolve()))
+    }
+  })
+
+  it('times out missing broker acknowledgements and lets disconnect cancel pending work', async () => {
+    const sockets = new Set<Socket>()
+    const receivedCommands: string[] = []
+    const silentServer = createServer((socket) => {
+      sockets.add(socket)
+      socket.once('close', () => sockets.delete(socket))
+      const packetParser = parser({ protocolVersion: 4 })
+      socket.on('data', (data) => packetParser.parse(
+        typeof data === 'string' ? Buffer.from(data) : data
+      ))
+      packetParser.on('packet', (packet: Packet) => {
+        receivedCommands.push(packet.cmd)
+        if (packet.cmd === 'connect') {
+          socket.write(generate({
+            cmd: 'connack',
+            returnCode: 0,
+            sessionPresent: false
+          }, { protocolVersion: 4 }))
+        } else if (packet.cmd === 'pingreq') {
+          socket.write(generate({ cmd: 'pingresp' }, { protocolVersion: 4 }))
+        }
+        // SUBACK, UNSUBACK, and PUBACK are deliberately withheld.
+      })
+    })
+    await new Promise<void>((resolve, reject) => {
+      silentServer.once('error', reject)
+      silentServer.listen(0, '127.0.0.1', resolve)
+    })
+    const silentPort = (silentServer.address() as AddressInfo).port
+    const statuses: StatusEvent[] = []
+    const messages: MqttMessageRecord[] = []
+    const service = new MqttService(
+      (status) => statuses.push(status),
+      (message) => messages.push(message),
+      () => undefined,
+      100
+    )
+
+    try {
+      await service.connect(connectionConfig(silentPort, 'mqttape_cancel_ack'))
+      const subscribing = service.subscribe({ topic: 'mqttape/no-suback', qos: 1 })
+      await waitFor(() => receivedCommands.includes('subscribe'))
+      const disconnecting = service.disconnect()
+      await expect(subscribing).rejects.toThrow(
+        'The MQTT operation was cancelled because the session disconnected.'
+      )
+      await disconnecting
+
+      await service.connect(connectionConfig(silentPort, 'mqttape_timeout_ack'))
+      await expect(service.publish({
+        topic: 'mqttape/no-puback',
+        payload: 'pending',
+        qos: 1,
+        retain: false
+      })).rejects.toThrow('Timed out waiting for the broker to acknowledge the MQTT publish.')
+
+      expect(statuses.at(-1)).toEqual({
+        state: 'error',
+        detail: 'Timed out waiting for the broker to acknowledge the MQTT publish.'
+      })
+      expect(messages).toEqual([])
+    } finally {
+      await service.disconnect()
+      sockets.forEach((socket) => socket.destroy())
+      await new Promise<void>((resolve) => silentServer.close(() => resolve()))
     }
   })
 

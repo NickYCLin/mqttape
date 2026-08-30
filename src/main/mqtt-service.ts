@@ -36,6 +36,8 @@ import {
 type StatusListener = (event: StatusEvent) => void
 type MessageListener = (message: MqttMessageRecord) => void
 type PacketListener = (event: MqttPacketEvent) => void
+type OperationCancellation = (reason: Error) => void
+type MqttOperation = 'publish' | 'subscription' | 'unsubscription'
 type SecureClientOptions = IClientOptions & {
   passphrase?: string
   wsOptions?: { headers?: Record<string, string> }
@@ -115,6 +117,7 @@ export async function createClientOptions(config: ConnectionConfig): Promise<ICl
 export class MqttService {
   private client: MqttClient | undefined
   private abortPendingConnect: (() => void) | undefined
+  private pendingOperations = new Set<OperationCancellation>()
   // Bumped by every disconnect so an in-flight connect can tell that the
   // session moved on while it was reading TLS files off disk.
   private connectEpoch = 0
@@ -125,7 +128,8 @@ export class MqttService {
   constructor(
     statusListener: StatusListener,
     messageListener: MessageListener,
-    packetListener: PacketListener = () => undefined
+    packetListener: PacketListener = () => undefined,
+    private readonly operationTimeoutMs = 15_000
   ) {
     this.statusListener = statusListener
     this.messageListener = messageListener
@@ -230,6 +234,9 @@ export class MqttService {
     this.client = undefined
 
     if (!client) return
+    this.cancelPendingOperations(
+      new Error('The MQTT operation was cancelled because the session disconnected.')
+    )
 
     await new Promise<void>((resolve) => {
       let settled = false
@@ -255,11 +262,8 @@ export class MqttService {
     const topic = request.topic.trim()
     if (!topic) throw new Error('Subscription topic is required.')
 
-    await new Promise<void>((resolve, reject) => {
-      client.subscribe(topic, { qos: request.qos }, (error) => {
-        if (error) reject(error)
-        else resolve()
-      })
+    await this.waitForAcknowledgement(client, 'subscription', (callback) => {
+      client.subscribe(topic, { qos: request.qos }, callback)
     })
   }
 
@@ -268,11 +272,8 @@ export class MqttService {
     const normalized = topic.trim()
     if (!normalized) return
 
-    await new Promise<void>((resolve, reject) => {
-      client.unsubscribe(normalized, (error) => {
-        if (error) reject(error)
-        else resolve()
-      })
+    await this.waitForAcknowledgement(client, 'unsubscription', (callback) => {
+      client.unsubscribe(normalized, callback)
     })
   }
 
@@ -297,34 +298,66 @@ export class MqttService {
     const payload = request.payloadBase64
       ? Buffer.from(request.payloadBase64, 'base64')
       : Buffer.from(request.payload, 'utf8')
-    await new Promise<void>((resolve, reject) => {
-      client.publish(
-        topic,
-        payload,
-        options,
-        (error) => {
-          if (error) {
-            reject(error)
-            return
-          }
-
-          this.messageListener({
-            id: createMessageId(),
-            direction: 'outgoing',
-            timestamp: new Date().toISOString(),
-            topic,
-            qos: request.qos,
-            retain: request.retain,
-            duplicate: false,
-            payloadBase64: payload.toString('base64'),
-            payloadText: request.payloadBase64 ? payload.toString('utf8') : request.payload,
-            size: payload.byteLength,
-            properties: toMqttPublishProperties(request.properties)
-          })
-          resolve()
-        }
-      )
+    await this.waitForAcknowledgement(client, 'publish', (callback) => {
+      client.publish(topic, payload, options, callback)
     })
+    this.messageListener({
+      id: createMessageId(),
+      direction: 'outgoing',
+      timestamp: new Date().toISOString(),
+      topic,
+      qos: request.qos,
+      retain: request.retain,
+      duplicate: false,
+      payloadBase64: payload.toString('base64'),
+      payloadText: request.payloadBase64 ? payload.toString('utf8') : request.payload,
+      size: payload.byteLength,
+      properties: toMqttPublishProperties(request.properties)
+    })
+  }
+
+  private async waitForAcknowledgement(
+    client: MqttClient,
+    operation: MqttOperation,
+    start: (callback: (error?: Error | null) => void) => void
+  ): Promise<void> {
+    await new Promise<void>((resolve, reject) => {
+      let settled = false
+      const finish = (error?: Error): void => {
+        if (settled) return
+        settled = true
+        clearTimeout(timeout)
+        this.pendingOperations.delete(cancel)
+        if (error) reject(error)
+        else resolve()
+      }
+      const cancel: OperationCancellation = (reason) => finish(reason)
+
+      this.pendingOperations.add(cancel)
+      const timeout = setTimeout(() => {
+        const error = new Error(
+          `Timed out waiting for the broker to acknowledge the MQTT ${operation}.`
+        )
+        if (this.client === client) {
+          this.client = undefined
+          this.cancelPendingOperations(error)
+          forceCloseClient(client)
+          this.statusListener({ state: 'error', detail: error.message })
+        } else {
+          finish(error)
+        }
+      }, this.operationTimeoutMs)
+
+      try {
+        start((error) => finish(error ?? undefined))
+      } catch (reason) {
+        finish(reason instanceof Error ? reason : new Error(String(reason)))
+      }
+    })
+  }
+
+  private cancelPendingOperations(reason: Error): void {
+    for (const cancel of [...this.pendingOperations]) cancel(reason)
   }
 
   private bindEvents(client: MqttClient, config: ConnectionConfig): void {
