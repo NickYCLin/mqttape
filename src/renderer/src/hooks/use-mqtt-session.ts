@@ -12,6 +12,7 @@ import type {
   StatusEvent,
   TlsFileKind
 } from '../../../shared/contracts'
+import { MAX_CAPTURE_MESSAGES } from '../../../shared/capture'
 import {
   MQTT5_PUBLISH_PROPERTIES_VERSION_ERROR,
   toMqttPublishProperties
@@ -24,7 +25,6 @@ import { defaultMqttWebSocketAuth } from '../../../shared/websocket-auth'
 import { MqttController } from '../lib/mqtt-controller'
 import { readWebProfiles, webSafeConfig, writeWebProfiles } from '../lib/web-profiles'
 
-const MAX_MESSAGES = 5_000
 // Each record keeps the payload twice (Base64 + text), so cap the retained
 // wire bytes as well or huge payloads exhaust renderer memory long before
 // the message-count limit is reached.
@@ -127,7 +127,7 @@ export function useMqttSession(sessionId = 'default') {
       setTotalMessageCount((count) => count + 1)
       setMessages((current) => {
         const next = [message, ...current]
-        let retained = next.length > MAX_MESSAGES ? MAX_MESSAGES : next.length
+        let retained = next.length > MAX_CAPTURE_MESSAGES ? MAX_CAPTURE_MESSAGES : next.length
         let bytes = 0
         for (let index = 0; index < retained; index += 1) {
           bytes += next[index].size

@@ -17,6 +17,11 @@ describe('MQTT Last Will configuration', () => {
     expect(encodeMqttWillPayload('3q2+7w==', 'base64')).toEqual(Uint8Array.from([0xde, 0xad, 0xbe, 0xef]))
   })
 
+  it('rejects unknown payload formats instead of treating them as Base64', () => {
+    expect(() => encodeMqttWillPayload('plain text', 'binary' as never))
+      .toThrow('Last Will payload format is invalid.')
+  })
+
   it('creates MQTT 5 Will properties and omits them for MQTT 3.1.1', () => {
     const will = {
       ...defaultMqttLastWill(),
@@ -53,5 +58,27 @@ describe('MQTT Last Will configuration', () => {
       .toContain('complete byte pairs')
     expect(mqttLastWillError({ ...enabled, topic: 'devices/status', willDelayInterval: -1 }, 5))
       .toContain('whole number')
+  })
+
+  it('rejects malformed runtime Last Will fields without throwing during validation', () => {
+    expect(mqttLastWillError(null, 5)).toBe('Last Will settings are invalid.')
+    expect(mqttLastWillError({ enabled: 'yes' }, 5)).toBe('Last Will settings are invalid.')
+    expect(mqttLastWillError({
+      ...defaultMqttLastWill(),
+      enabled: true,
+      topic: 42
+    }, 5)).toBe('Last Will settings are invalid.')
+    expect(mqttLastWillError({
+      ...defaultMqttLastWill(),
+      enabled: true,
+      topic: 'devices/status',
+      payloadFormat: 'binary'
+    }, 5)).toBe('Last Will settings are invalid.')
+    expect(mqttLastWillError({
+      ...defaultMqttLastWill(),
+      enabled: true,
+      topic: 'devices/status',
+      retain: 'yes'
+    }, 5)).toBe('Last Will settings are invalid.')
   })
 })

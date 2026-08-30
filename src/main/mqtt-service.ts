@@ -156,7 +156,18 @@ export class MqttService {
       throw new Error('The MQTT session was closed before the connection started.')
     }
 
-    const client = mqtt.connect(buildBrokerUrl(config), options)
+    let client: MqttClient
+    try {
+      client = mqtt.connect(buildBrokerUrl(config), options)
+    } catch (error) {
+      if (epoch === this.connectEpoch) {
+        this.statusListener({
+          state: 'error',
+          detail: error instanceof Error ? error.message : String(error)
+        })
+      }
+      throw error
+    }
     this.client = client
     this.bindEvents(client, config)
 

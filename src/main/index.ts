@@ -11,6 +11,8 @@ import type {
   SubscribeRequest,
   TlsFileKind
 } from '../shared/contracts'
+import { isCaptureFile } from '../shared/capture'
+import { mqttConnectionConfigError } from '../shared/connection-config'
 import { MqttService } from './mqtt-service'
 import { ProfileStore } from './profile-store'
 import { UpdateService } from './update-service'
@@ -85,6 +87,8 @@ function registerIpcHandlers(profileStore: ProfileStore, updater: UpdateService)
     sessionId: MqttSessionId,
     config: ConnectionConfig
   ) => {
+    const connectionError = mqttConnectionConfigError(config)
+    if (connectionError) throw new Error(connectionError)
     // Register the slot before any await so a destroy-session arriving during
     // the trusted-path check can find and tear it down.
     const service = mqttServiceFor(sessionId)
@@ -122,6 +126,7 @@ function registerIpcHandlers(profileStore: ProfileStore, updater: UpdateService)
     return service.publish(request)
   })
   ipcMain.handle('mqttape:save-capture', async (_event, capture: CaptureFile) => {
+    if (!isCaptureFile(capture)) throw new Error('The MQTTape capture is not valid.')
     const result = await dialog.showSaveDialog(mainWindow!, {
       title: 'Export MQTTape capture',
       defaultPath: join(

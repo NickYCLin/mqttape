@@ -80,6 +80,12 @@ describe('i18n', () => {
       'zh-TW',
       'Keep Alive must be a whole number from 0 to 65535 seconds.'
     )).toBe('Keep Alive 必須是 0 到 65535 秒的整數。')
+    expect(translateKnownMessage(
+      'zh-TW',
+      'Client ID is required when Clean Session is disabled.'
+    )).toBe('關閉 Clean Session 時必須輸入 Client ID。')
+    expect(translateKnownMessage('zh-TW', 'Last Will settings are invalid.'))
+      .toBe('Last Will 設定資料無效。')
   })
 
   it('keeps unknown broker errors unchanged', () => {

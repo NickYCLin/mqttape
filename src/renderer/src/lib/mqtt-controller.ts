@@ -152,26 +152,37 @@ export class MqttController {
     if (epoch !== this.connectEpoch) {
       throw new Error('The MQTT session was closed before the connection started.')
     }
-    const client = mqtt.connect(brokerUrl(config), {
-      clientId: config.clientId || undefined,
-      username: config.username || undefined,
-      password: config.password || undefined,
-      protocolVersion: config.mqttVersion,
-      clean: config.clean,
-      keepalive: config.keepalive,
-      reconnectPeriod: config.reconnectPeriod,
-      connectTimeout: 15_000,
-      rejectUnauthorized: config.rejectUnauthorized,
-      resubscribe: true,
-      ...(will
-        ? {
-            will: {
-              ...will,
-              payload: Buffer.from(will.payload)
+    let client: MqttClient
+    try {
+      client = mqtt.connect(brokerUrl(config), {
+        clientId: config.clientId || undefined,
+        username: config.username || undefined,
+        password: config.password || undefined,
+        protocolVersion: config.mqttVersion,
+        clean: config.clean,
+        keepalive: config.keepalive,
+        reconnectPeriod: config.reconnectPeriod,
+        connectTimeout: 15_000,
+        rejectUnauthorized: config.rejectUnauthorized,
+        resubscribe: true,
+        ...(will
+          ? {
+              will: {
+                ...will,
+                payload: Buffer.from(will.payload)
+              }
             }
-          }
-        : {})
-    })
+          : {})
+      })
+    } catch (error) {
+      if (epoch === this.connectEpoch) {
+        this.emitStatus({
+          state: 'error',
+          detail: error instanceof Error ? error.message : String(error)
+        })
+      }
+      throw error
+    }
     this.webClient = client
     this.bindWebEvents(client, config)
 

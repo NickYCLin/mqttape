@@ -62,11 +62,11 @@ export function encodeMqttWillPayload(
   payload: string,
   format: MqttWillPayloadFormat
 ): Uint8Array {
-  const bytes = format === 'text'
-    ? new TextEncoder().encode(payload)
-    : format === 'hex'
-      ? decodeHex(payload)
-      : decodeBase64(payload)
+  let bytes: Uint8Array
+  if (format === 'text') bytes = new TextEncoder().encode(payload)
+  else if (format === 'hex') bytes = decodeHex(payload)
+  else if (format === 'base64') bytes = decodeBase64(payload)
+  else throw new Error('Last Will payload format is invalid.')
   if (bytes.byteLength > MAX_MQTT_WILL_PAYLOAD_BYTES) {
     throw new Error('Last Will payload exceeds the 1 MB limit.')
   }
@@ -81,22 +81,38 @@ function uint32Error(value: number | undefined, label: string): string | null {
 }
 
 export function mqttLastWillError(
-  will: MqttLastWillConfig | undefined,
+  will: unknown,
   mqttVersion: MqttVersion
 ): string | null {
-  if (!will?.enabled) return null
-  const topic = will.topic.trim()
+  if (will === undefined) return null
+  if (!will || typeof will !== 'object' || Array.isArray(will)) {
+    return 'Last Will settings are invalid.'
+  }
+  const candidate = will as Partial<MqttLastWillConfig>
+  if (typeof candidate.enabled !== 'boolean') return 'Last Will settings are invalid.'
+  if (!candidate.enabled) return null
+  if (
+    typeof candidate.topic !== 'string' ||
+    typeof candidate.payload !== 'string' ||
+    !['text', 'hex', 'base64'].includes(candidate.payloadFormat ?? '') ||
+    typeof candidate.retain !== 'boolean' ||
+    (candidate.contentType !== undefined && typeof candidate.contentType !== 'string')
+  ) {
+    return 'Last Will settings are invalid.'
+  }
+  const willConfig = candidate as MqttLastWillConfig
+  const topic = willConfig.topic.trim()
   const topicError = publishTopicError(topic)
   if (topicError) return topicError.replace(/^Publish/, 'Last Will')
-  if (![0, 1, 2].includes(will.qos)) return 'Last Will QoS must be 0, 1, or 2.'
+  if (![0, 1, 2].includes(willConfig.qos)) return 'Last Will QoS must be 0, 1, or 2.'
   try {
-    encodeMqttWillPayload(will.payload, will.payloadFormat)
+    encodeMqttWillPayload(willConfig.payload, willConfig.payloadFormat)
   } catch (reason) {
     return reason instanceof Error ? reason.message : String(reason)
   }
   if (mqttVersion === 5) {
-    return uint32Error(will.willDelayInterval, 'Last Will Delay') ??
-      uint32Error(will.messageExpiryInterval, 'Last Will Message Expiry')
+    return uint32Error(willConfig.willDelayInterval, 'Last Will Delay') ??
+      uint32Error(willConfig.messageExpiryInterval, 'Last Will Message Expiry')
   }
   return null
 }

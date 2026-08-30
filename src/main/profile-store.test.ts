@@ -57,7 +57,8 @@ describe('ProfileStore', () => {
       profiles: [
         { id: 'valid', config: config() },
         { id: 'invalid-host', config: { ...config(), host: 127 } },
-        { id: 'invalid-protocol', config: { ...config(), protocol: 'ftp' } }
+        { id: 'invalid-protocol', config: { ...config(), protocol: 'ftp' } },
+        { id: 'invalid-will', config: { ...config(), will: 'broken' } }
       ]
     }))
     const store = new ProfileStore(filePath, {
@@ -67,8 +68,24 @@ describe('ProfileStore', () => {
     })
 
     const loaded = await store.list()
-    expect(loaded.map(({ id }) => id)).toEqual(['valid'])
+    expect(loaded.map(({ id }) => id)).toEqual(['valid', 'invalid-will'])
     expect(loaded[0].config.host).toBe('broker.example.com')
+    expect(loaded[1].config.will).toBeUndefined()
+  })
+
+  it('rejects malformed renderer profile data before saving', async () => {
+    const directory = await mkdtemp(join(tmpdir(), 'mqttape-profile-'))
+    temporaryDirectories.push(directory)
+    const store = new ProfileStore(join(directory, 'profiles.json'), {
+      isAvailable: () => false,
+      encrypt: () => Buffer.alloc(0),
+      decrypt: () => ''
+    })
+
+    await expect(store.save({ config: { ...config(), websocketHeaders: 'broken' } } as never))
+      .rejects.toThrow('Broker profile data is invalid.')
+    await expect(store.save({ config: { ...config(), will: { enabled: true } } } as never))
+      .rejects.toThrow('Broker profile data is invalid.')
   })
 
   it('normalizes profile identities, removes duplicates, and bounds stored data', async () => {

@@ -1,6 +1,9 @@
 import type { CaptureFile, MqttMessageRecord } from './contracts'
 import { decodePayloadBytes, filterMessages } from './message'
 import { isMqttMessageProperties } from './mqtt-properties'
+import { publishTopicError } from './mqtt-topic'
+
+export const MAX_CAPTURE_MESSAGES = 5_000
 
 export interface CaptureTrimOptions {
   includeIncoming: boolean
@@ -51,16 +54,31 @@ export function isCaptureFile(value: unknown): value is CaptureFile {
   if (!value || typeof value !== 'object') return false
   const candidate = value as Partial<CaptureFile>
   if (candidate.format !== 'mqttape-capture' || candidate.version !== 1) return false
-  if (!Array.isArray(candidate.messages) || !candidate.connection) return false
+  if (typeof candidate.exportedAt !== 'string' || !Number.isFinite(Date.parse(candidate.exportedAt))) {
+    return false
+  }
+  if (
+    !candidate.connection ||
+    typeof candidate.connection !== 'object' ||
+    Array.isArray(candidate.connection) ||
+    !Array.isArray(candidate.messages) ||
+    candidate.messages.length > MAX_CAPTURE_MESSAGES
+  ) {
+    return false
+  }
+
+  const messageIds = new Set<string>()
 
   return candidate.messages.every((message) => {
     const timestamp = Date.parse(message?.timestamp ?? '')
     const validShape = Boolean(
       message &&
       typeof message.id === 'string' &&
+      message.id.trim() &&
+      !messageIds.has(message.id) &&
       (message.direction === 'incoming' || message.direction === 'outgoing') &&
       typeof message.topic === 'string' &&
-      message.topic.length > 0 &&
+      !publishTopicError(message.topic) &&
       Number.isFinite(timestamp) &&
       (message.qos === 0 || message.qos === 1 || message.qos === 2) &&
       typeof message.retain === 'boolean' &&
@@ -72,6 +90,7 @@ export function isCaptureFile(value: unknown): value is CaptureFile {
       (message.properties === undefined || isMqttMessageProperties(message.properties))
     )
     if (!validShape) return false
+    messageIds.add(message.id)
 
     try {
       return decodePayloadBytes(message.payloadBase64).byteLength === message.size

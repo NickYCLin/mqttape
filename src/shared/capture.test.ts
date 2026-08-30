@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { createCaptureTrimPlan, isCaptureFile } from './capture'
+import { MAX_CAPTURE_MESSAGES, createCaptureTrimPlan, isCaptureFile } from './capture'
 import type { MqttMessageRecord } from './contracts'
 
 function message(
@@ -91,6 +91,35 @@ describe('capture validation', () => {
       version: 1,
       connection: {},
       messages: [{ topic: 42 }]
+    })).toBe(false)
+  })
+
+  it('rejects malformed metadata, duplicate IDs, and captures above the retained limit', () => {
+    const validMessage = message(
+      'unique',
+      'incoming',
+      '2026-01-01T00:00:00.000Z',
+      'demo/topic',
+      'payload'
+    )
+    const capture = {
+      format: 'mqttape-capture',
+      version: 1,
+      exportedAt: '2026-01-01T00:00:00.000Z',
+      connection: {},
+      messages: [validMessage]
+    }
+
+    expect(isCaptureFile({ ...capture, exportedAt: 'not-a-date' })).toBe(false)
+    expect(isCaptureFile({ ...capture, connection: [] })).toBe(false)
+    expect(isCaptureFile({ ...capture, messages: [{ ...validMessage, id: '  ' }] })).toBe(false)
+    expect(isCaptureFile({ ...capture, messages: [validMessage, validMessage] })).toBe(false)
+    expect(isCaptureFile({
+      ...capture,
+      messages: Array.from(
+        { length: MAX_CAPTURE_MESSAGES + 1 },
+        (_, index) => ({ ...validMessage, id: `message-${index}` })
+      )
     })).toBe(false)
   })
 

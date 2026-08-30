@@ -105,6 +105,89 @@ function normalizeStoredWebSocketAuth(value: unknown): StoredWebSocketAuth | und
   }
 }
 
+function normalizeStoredLastWill(value: unknown): StoredLastWill | undefined {
+  if (!value || typeof value !== 'object' || Array.isArray(value)) return undefined
+  const will = value as Partial<StoredLastWill>
+  if (
+    typeof will.enabled !== 'boolean' ||
+    typeof will.topic !== 'string' ||
+    (will.payloadFormat !== 'text' && will.payloadFormat !== 'hex' &&
+      will.payloadFormat !== 'base64') ||
+    (will.qos !== 0 && will.qos !== 1 && will.qos !== 2) ||
+    typeof will.retain !== 'boolean' ||
+    (will.willDelayInterval !== undefined && typeof will.willDelayInterval !== 'number') ||
+    (will.messageExpiryInterval !== undefined && typeof will.messageExpiryInterval !== 'number') ||
+    (will.contentType !== undefined && typeof will.contentType !== 'string')
+  ) return undefined
+
+  return {
+    enabled: will.enabled,
+    topic: will.topic,
+    payloadFormat: will.payloadFormat,
+    qos: will.qos,
+    retain: will.retain,
+    ...(will.willDelayInterval === undefined
+      ? {}
+      : { willDelayInterval: will.willDelayInterval }),
+    ...(will.messageExpiryInterval === undefined
+      ? {}
+      : { messageExpiryInterval: will.messageExpiryInterval }),
+    ...(will.contentType === undefined ? {} : { contentType: will.contentType })
+  }
+}
+
+function isNameValueList(value: unknown): value is MqttWebSocketNameValue[] {
+  return Array.isArray(value) && value.every((item) =>
+    Boolean(item) &&
+    typeof item === 'object' &&
+    typeof (item as Partial<MqttWebSocketNameValue>).name === 'string' &&
+    typeof (item as Partial<MqttWebSocketNameValue>).value === 'string'
+  )
+}
+
+function isWebSocketAuth(value: unknown): value is MqttWebSocketAuth {
+  if (!value || typeof value !== 'object' || Array.isArray(value)) return false
+  const auth = value as Partial<MqttWebSocketAuth>
+  return (auth.mode === 'none' || auth.mode === 'basic' || auth.mode === 'bearer') &&
+    typeof auth.username === 'string' &&
+    typeof auth.secret === 'string'
+}
+
+function isLastWillConfig(value: unknown): value is MqttLastWillConfig {
+  if (!value || typeof value !== 'object' || Array.isArray(value)) return false
+  const will = value as Partial<MqttLastWillConfig>
+  if (typeof will.payload !== 'string') return false
+  return normalizeStoredLastWill({
+    enabled: will.enabled,
+    topic: will.topic,
+    payloadFormat: will.payloadFormat,
+    qos: will.qos,
+    retain: will.retain,
+    willDelayInterval: will.willDelayInterval,
+    messageExpiryInterval: will.messageExpiryInterval,
+    contentType: will.contentType
+  }) !== undefined
+}
+
+function isSaveProfileRequest(value: unknown): value is SaveBrokerProfileRequest {
+  if (!value || typeof value !== 'object' || Array.isArray(value)) return false
+  const request = value as Partial<SaveBrokerProfileRequest>
+  if (!request.config || typeof request.config.name !== 'string' ||
+      !isConnectionConfigCore({ ...request.config, name: 'profile' })) return false
+  const config = request.config as ConnectionConfig
+  return (request.id === undefined || typeof request.id === 'string') &&
+    typeof config.password === 'string' &&
+    typeof config.caPath === 'string' &&
+    typeof config.clientCertificatePath === 'string' &&
+    typeof config.clientKeyPath === 'string' &&
+    typeof config.clientKeyPassphrase === 'string' &&
+    (config.websocketAuth === undefined || isWebSocketAuth(config.websocketAuth)) &&
+    (config.websocketHeaders === undefined || isNameValueList(config.websocketHeaders)) &&
+    (config.websocketQueryParameters === undefined ||
+      isNameValueList(config.websocketQueryParameters)) &&
+    (config.will === undefined || isLastWillConfig(config.will))
+}
+
 function normalizeStoredProfile(value: unknown): StoredProfile | null {
   if (!value || typeof value !== 'object') return null
   const candidate = value as Partial<StoredProfile>
@@ -127,7 +210,8 @@ function normalizeStoredProfile(value: unknown): StoredProfile | null {
       websocketHeaders: normalizeStoredNameValues(candidate.config.websocketHeaders),
       websocketQueryParameters: normalizeStoredNameValues(
         candidate.config.websocketQueryParameters
-      )
+      ),
+      will: normalizeStoredLastWill(candidate.config.will)
     },
     encryptedSecrets: typeof candidate.encryptedSecrets === 'string'
       ? candidate.encryptedSecrets
@@ -147,6 +231,7 @@ export class ProfileStore {
   }
 
   async save(request: SaveBrokerProfileRequest): Promise<BrokerProfile> {
+    if (!isSaveProfileRequest(request)) throw new Error('Broker profile data is invalid.')
     const profileName = request.config.name.trim()
     if (!profileName) throw new Error('Profile name is required.')
 
