@@ -8,7 +8,7 @@ MQTTape is an open-source MQTT traffic recorder, packet inspector, topic explore
 [![Latest release](https://img.shields.io/github/v/release/NickYCLin/mqttape?display_name=tag&sort=semver)](https://github.com/NickYCLin/mqttape/releases/latest)
 [![License: MIT](https://img.shields.io/github/license/NickYCLin/mqttape)](LICENSE)
 
-[立即使用 Web Lite](https://nickyclin.github.io/mqttape/) · [下載桌面版](https://github.com/NickYCLin/mqttape/releases/latest) · [比較桌面版與 Web Lite](#桌面版與-web-lite) · [查看程式碼導覽](docs/PROJECT_OVERVIEW.md)
+[立即使用 Web Lite](https://nickyclin.github.io/mqttape/) · [下載桌面版](https://github.com/NickYCLin/mqttape/releases/latest) · [隱私權政策](https://nickyclin.github.io/mqttape/privacy/) · [比較桌面版與 Web Lite](#桌面版與-web-lite) · [查看程式碼導覽](docs/PROJECT_OVERVIEW.md)
 
 MQTTape 保留早期 Chrome MQTT 工具即開即用的便利性，並加入可搜尋的訊息時間軸、Topic 樹、可攜式擷取檔及 LoRaWAN 輔助功能。
 
@@ -145,7 +145,7 @@ ChirpStack:      application/<application-id>/device/+/event/+
 > [!TIP]
 > 歡迎至 [Releases 列表](https://github.com/NickYCLin/mqttape/releases) 下載各平台安裝檔或檢視 [更新日誌 (Changelog)](CHANGELOG.md)。
 > 維護者可參考 [Release 自動化與版本規則](docs/RELEASE_AUTOMATION.zh-TW.md)；依 SemVer 與 Conventional Commits 準備版本並建立 Tag 後，系統會自動打包發布。
-> Microsoft Store 尚未公開上架；維護者可依 [Microsoft Store MSIX 發布手冊](docs/MICROSOFT_STORE.zh-TW.md)完成 Partner Center 套件上傳與送審。
+> Microsoft Store 尚未公開上架；多架構封裝、雙語上架文字、8 張本地化截圖與[公開雙語隱私頁](https://nickyclin.github.io/mqttape/privacy/)已準備，仍需完成 Partner Center 資產與套件上傳、`runFullTrust` 審查、certification 與 Store／flight 安裝驗收。維護者請依 [Microsoft Store MSIX 發布手冊](docs/MICROSOFT_STORE.zh-TW.md)處理。
 
 ## 程式碼簽章政策
 
@@ -154,7 +154,7 @@ ChirpStack:      application/<application-id>/device/+/event/+
 - Committer 與 Reviewer：[NickYCLin](https://github.com/NickYCLin)
 - Approver：[NickYCLin](https://github.com/NickYCLin)
 - 每次 Release 的簽章要求都必須由 Approver 手動核准
-- 隱私權政策：[PRIVACY.md](PRIVACY.md)
+- 隱私權政策：[公開雙語頁](https://nickyclin.github.io/mqttape/privacy/)（[repository 原始政策](PRIVACY.md)）
 - 核准後接線與驗收手冊：[docs/SIGNPATH.md](docs/SIGNPATH.md)
 
 SignPath 開源專案申請已送出但仍在等待核准。在申請與簽章流程完成之前發布的 Windows 套件仍未簽章；執行前請先使用 Release 中的 Checksum Manifest 驗證下載檔案。
@@ -291,7 +291,7 @@ MQTTape 使用 `protobufjs` 解析 Schema 的反射資訊，但以內建的直�
 
 ## Roadmap
 
-- Microsoft Store MSIX 上架（封裝、產品識別與 Bundle 驗證已完成，待 Partner Center 上傳與送審）
+- Microsoft Store MSIX 上架（封裝、產品識別、Bundle 驗證、雙語 listing、8 張本地化截圖與公開隱私頁已完成；待 Partner Center 資產／套件上傳、`runFullTrust` 審查、certification 與 Store／flight 安裝驗收）
 - Windows 安裝程式程式碼簽章（SignPath 申請已送出，等待核准與專案參數）
 
 ## 參與貢獻

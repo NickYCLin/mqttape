@@ -1,0 +1,149 @@
+<!doctype html>
+<html lang="zh-Hant">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta
+      name="description"
+      content="MQTTape 雙語隱私權政策。MQTTape 不提供帳號、廣告、分析或遙測服務，Broker 憑證與擷取內容不會傳送給維護者。"
+    />
+    <meta name="robots" content="index, follow" />
+    <meta name="referrer" content="no-referrer" />
+    <meta
+      http-equiv="Content-Security-Policy"
+      content="default-src 'none'; style-src 'unsafe-inline'; img-src 'self' data:; base-uri 'none'; form-action 'none'"
+    />
+    <link rel="canonical" href="https://nickyclin.github.io/mqttape/privacy/" />
+    <title>MQTTape 隱私權政策 | Privacy Policy</title>
+    <style>
+      :root {
+        color-scheme: light dark;
+        font-family:
+          Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI",
+          sans-serif;
+        background: #0b0d12;
+        color: #eef0f6;
+      }
+
+      * { box-sizing: border-box; }
+      body { margin: 0; background: #0b0d12; line-height: 1.7; }
+      main { width: min(900px, calc(100% - 32px)); margin: 0 auto; padding: 48px 0 72px; }
+      article { padding: 32px; border: 1px solid #2b3040; border-radius: 18px; background: #121620; }
+      article + article { margin-top: 28px; }
+      h1, h2 { line-height: 1.25; }
+      h1 { margin: 0 0 8px; font-size: clamp(2rem, 6vw, 3.25rem); }
+      h2 { margin-top: 30px; font-size: 1.35rem; }
+      p, li { max-width: 76ch; }
+      a { color: #b9adff; }
+      a:focus-visible { outline: 3px solid #b9adff; outline-offset: 3px; }
+      .eyebrow { margin: 0 0 8px; color: #b9adff; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; }
+      .updated { margin: 0 0 26px; color: #aeb5c8; }
+      .language-nav { display: flex; flex-wrap: wrap; gap: 12px; margin: 24px 0; }
+      .language-nav a { padding: 8px 12px; border: 1px solid #5c527f; border-radius: 999px; text-decoration: none; }
+      .notice { padding: 14px 16px; border-left: 4px solid #7968dc; background: #191e2b; }
+      footer { margin-top: 28px; color: #aeb5c8; text-align: center; }
+
+      @media (prefers-color-scheme: light) {
+        :root, body { background: #f5f6f9; color: #1c2030; }
+        article { border-color: #d8dbe5; background: #ffffff; }
+        .updated, footer { color: #5f6678; }
+        .notice { background: #f1efff; }
+        a { color: #5543b8; }
+        a:focus-visible { outline-color: #5543b8; }
+      }
+
+      @media (max-width: 600px) {
+        main { padding-top: 24px; }
+        article { padding: 22px; }
+      }
+    </style>
+  </head>
+  <body>
+    <main>
+      <p class="eyebrow">MQTTape</p>
+      <h1>隱私權政策 / Privacy Policy</h1>
+      <p class="updated">最後更新 / Last updated: 2026-08-17</p>
+      <nav class="language-nav" aria-label="Language">
+        <a href="#zh-tw" lang="zh-Hant">繁體中文</a>
+        <a href="#en-us" lang="en">English</a>
+        <a href="../">Web Lite</a>
+      </nav>
+
+      <article id="zh-tw" lang="zh-Hant">
+        <h2>MQTTape 隱私權政策</h2>
+        <p>
+          MQTTape 是開源 MQTT 用戶端。MQTTape 不提供由專案營運的帳號、應用程式分析、遙測端點或廣告服務；MQTTape 維護者不會收集應用程式使用資料。
+        </p>
+
+        <h2>網路通訊</h2>
+        <ul>
+          <li>當你連線、訂閱、發布或重播擷取內容時，MQTTape 會與你設定的 Broker 交換 MQTT 資料。該 Broker 由你或其營運者控制，並適用營運者自己的隱私權作法。</li>
+          <li>已安裝的桌面版會定期查詢 GitHub Releases 是否有應用程式更新，並可能在背景下載可用更新。GitHub 可能取得 IP 位址與 User Agent 等標準連線中繼資料；請參閱 <a href="https://docs.github.com/en/site-policy/privacy-policies/github-general-privacy-statement">GitHub 隱私權聲明</a>。</li>
+          <li>Web Lite 由 GitHub Pages 提供，且只會連線至你選擇的 WebSocket Broker。GitHub Pages 請求適用 GitHub 隱私權聲明。</li>
+          <li>只有在你選擇時，MQTTape 才會開啟外部文件或下載連結。</li>
+        </ul>
+        <p class="notice">MQTTape 不會把 Broker 憑證、擷取內容、已儲存設定檔或 TLS Private Key 傳送給維護者。</p>
+
+        <h2>本機資料</h2>
+        <p>
+          桌面版設定檔保存在 Electron 的本機 user-data 目錄。密碼與 Private Key Passphrase 會透過作業系統支援的 Electron <code>safeStorage</code> 加密；MQTTape 不會退回以純文字保存秘密。Web Lite 可以在瀏覽器儲存空間保存非敏感的連線偏好，但不會保存密碼或憑證路徑。
+        </p>
+        <p>
+          擷取內容保留在本機，而且只會在你要求匯出時建立檔案。匯出的擷取檔不含密碼、Passphrase 或本機憑證路徑。你可以隨時從裝置移除設定檔與已匯出的擷取檔。
+        </p>
+        <p>
+          MQTTape 會在本機裝置保存最多 1,000 筆已解析的 LoRaWAN Downlink 狀態事件，以便跨應用程式重新啟動關聯請求與後續確認。歷史可能包含裝置與應用程式識別碼、Topic、關聯識別碼、時間戳記、訊框中繼資料與平台錯誤文字，但不包含原始 MQTT Payload 或 Broker 憑證。你可以從 Downlinks 畫面匯出或清除歷史。
+        </p>
+        <p>
+          解除安裝桌面版會使用作業系統的一般應用程式移除控制；依作業系統行為，本機應用程式資料可能需要另外移除。
+        </p>
+
+        <h2>政策異動與問題</h2>
+        <p>
+          本政策的重大變更會發布在原始碼 repository。如有問題，請在 <a href="https://github.com/NickYCLin/mqttape/issues">MQTTape issue tracker</a> 提出。
+        </p>
+        <p>此靜態頁面不載入第三方 script、分析服務、追蹤像素或 CDN 資產。</p>
+      </article>
+
+      <article id="en-us" lang="en">
+        <h2>MQTTape Privacy Policy</h2>
+        <p>
+          MQTTape is an open-source MQTT client. It does not provide a project-operated account service, analytics service, telemetry endpoint, or advertising service. The MQTTape maintainers do not collect application usage data.
+        </p>
+
+        <h2>Network communication</h2>
+        <ul>
+          <li>When you connect, subscribe, publish, or replay a capture, MQTTape exchanges MQTT data with the broker address you configured. That broker is controlled by you or its operator and is subject to the operator's privacy practices.</li>
+          <li>Installed desktop builds periodically query GitHub Releases for application updates and may download an available update in the background. GitHub may receive standard connection metadata such as your IP address and user agent; see the <a href="https://docs.github.com/en/site-policy/privacy-policies/github-general-privacy-statement">GitHub Privacy Statement</a>.</li>
+          <li>Web Lite is delivered by GitHub Pages and connects only to the WebSocket broker you select. GitHub Pages requests are subject to the GitHub Privacy Statement.</li>
+          <li>Links to external documentation or downloads are opened only when you choose them.</li>
+        </ul>
+        <p class="notice">MQTTape does not send broker credentials, capture contents, saved profiles, or TLS private keys to the maintainers.</p>
+
+        <h2>Local data</h2>
+        <p>
+          Desktop profiles are stored in Electron's local user-data directory. Passwords and private-key passphrases are encrypted through the operating system with Electron <code>safeStorage</code>; MQTTape does not fall back to plaintext secret storage. Web Lite can store non-secret connection preferences in browser storage but does not save passwords or certificate paths.
+        </p>
+        <p>
+          Captures are held locally and are exported only when you request an export. Exported captures omit passwords, passphrases, and local certificate paths. You can remove saved profiles and exported capture files from your device at any time.
+        </p>
+        <p>
+          MQTTape stores up to 1,000 parsed LoRaWAN downlink status events on the local device so requests and later acknowledgements can remain associated across app restarts. This history can include device and application identifiers, topics, correlation identifiers, timestamps, frame metadata, and platform error text. It does not include raw MQTT payloads or broker credentials. You can export or clear the history from the Downlinks view.
+        </p>
+        <p>
+          Uninstalling the desktop application uses your operating system's normal application removal controls; depending on the operating system, local application data may need to be removed separately.
+        </p>
+
+        <h2>Changes and questions</h2>
+        <p>
+          Material changes to this policy will be published in the source repository. For questions, open an issue in the <a href="https://github.com/NickYCLin/mqttape/issues">MQTTape issue tracker</a>.
+        </p>
+        <p>This static page loads no third-party scripts, analytics services, tracking pixels, or CDN assets.</p>
+      </article>
+
+      <footer>
+        <a href="https://github.com/NickYCLin/mqttape">MQTTape source repository</a>
+      </footer>
+    </main>
+  </body>
+</html>

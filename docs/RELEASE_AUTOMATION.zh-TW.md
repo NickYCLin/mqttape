@@ -79,9 +79,13 @@ MQTTape 為三大作業系統與兩大主流 CPU 架構提供原生編譯的二�
 
 ## Microsoft Store MSIX
 
-Store 套件不跟著 Release Tag 自動發布。維護者需先在 Partner Center 保留產品名稱並設定三個產品識別變數，再手動執行 `store-msix.yml`。工作流程會產生 x64 與 ARM64 MSIX、合併成一份 `.msixbundle` 並驗證封裝結構；最後仍須由維護者完成 WACK、Store 列表資料與送審。完整步驟見 [Microsoft Store MSIX 發布手冊](MICROSOFT_STORE.zh-TW.md)。
+Store 套件不跟著 Release Tag 自動發布。維護者需先在 Partner Center 保留產品名稱並設定三個產品識別變數，再手動執行 `store-msix.yml`。工作流程會產生 x64 與 ARM64 MSIX、合併成一份 `.msixbundle` 並驗證封裝結構；最後仍須由維護者完成 Store listing、restricted capability 說明、Partner Center 套件驗證與 certification。完整步驟見 [Microsoft Store MSIX 發布手冊](MICROSOFT_STORE.zh-TW.md)。
 
 Store 版的安裝、簽章與更新皆由 Microsoft Store 管理，不使用 GitHub Release 的 `electron-updater`，也不改變既有 Setup／Portable 的簽章狀態。
+
+MQTTape 的 Electron／Win32 桌面程序需要 `runFullTrust` restricted capability。它讓一般 medium-integrity 桌面程序啟動，並不代表應用程式要求管理員權限；Partner Center 會依實際 manifest 要求用途說明，且核准結果是 certification 的一部分。可貼入的繁中／英文文案、固定隱私與支援 URL，以及送審 gate 已整理在 [`store-listing/`](../store-listing/README.md)。
+
+Windows App Certification Kit（WACK）已 deprecated 且不再維護，只能視為可選的本機 preflight。正式 gate 是 Partner Center preprocessing／package validation、restricted capability 審查與 certification report；已有基礎版本時，Store 更新應先透過 package flight 給指定測試群組驗收，而且 flight 本身同樣需要 certification。
 
 ---
 
@@ -128,3 +132,4 @@ sha256sum -c SHA256SUMS.txt
 - [ ] 建立 Git Tag 並推送：`git tag vX.Y.Z && git push origin vX.Y.Z`。
 - [ ] 監控 GitHub Actions `Release` workflow 執行狀態（確認 6 組 Runner 與 Publish 成功）。
 - [ ] 檢視 GitHub Release 頁面產物與 `SHA256SUMS.txt` 是否齊全。
+- [ ] 若要準備 Microsoft Store submission，另依 [`store-listing/common/submission-checklist.md`](../store-listing/common/submission-checklist.md)完成 listing、截圖、`runFullTrust` 說明、Partner Center certification 與 Store／flight 實際安裝驗收；GitHub Release 成功不代表 Store 上架完成。
