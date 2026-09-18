@@ -37,14 +37,14 @@
     "electron-updater": "^6.8.9",
     "mqtt": "^5.14.1",
     "protobufjs": "^8.8.0",
-    "react": "^19.1.1",
+    "react": "^19.3.0",
     "react-dom": "^19.1.1"
   },
   "devDependencies": {
     "@eslint/js": "^10.0.1",
     "@playwright/test": "^1.63.0",
     "@types/node": "^26.5.0",
-    "@types/react": "^19.1.10",
+    "@types/react": "^19.3.0",
     "@types/react-dom": "^19.2.7",
     "@types/ws": "^8.18.1",
     "@vitejs/plugin-react": "^5.0.2",
