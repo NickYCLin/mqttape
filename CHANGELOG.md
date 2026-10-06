@@ -6,6 +6,10 @@
 
 ## 未發布
 
+---
+
+## [0.14.0](https://github.com/NickYCLin/mqttape/compare/v0.13.0...v0.14.0) (2026-10-06)
+
 ### 🚀 新增功能
 * **系統匣背景執行**（[#81](https://github.com/NickYCLin/mqttape/issues/81)）：
   - 桌面版新增系統匣圖示，Windows 與 macOS 關閉視窗後會保留連線在背景執行，點兩下圖示即可回到畫面。
@@ -17,7 +21,8 @@
   - 檔案、編輯、檢視、視窗與說明選單改為跟隨介面語言顯示繁體中文或英文。
   - 正式版移除重新載入與開發人員工具等用不到的項目，並在說明選單加入 GitHub 專案與問題回報連結。
 * **相依套件**：
-  - 修正 mqtt 5.16.0 的 SUBACK 長度檢查安全性問題，並同步升級 React 19.3、Electron 44.5 與 Vitest 5。
+  - 升級 mqtt 至 5.16.0，修正 SUBACK 授權結果未檢查長度的安全性問題。
+  - 升級 React 19.3、Electron 44.5 與 Vitest 5，並更新 brace-expansion、source-map-js 等有已知弱點的間接相依。
 
 ---
 
