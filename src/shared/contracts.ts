@@ -226,6 +226,8 @@ export interface ReplayProgress {
   currentTopic?: string
 }
 
+export type InterfaceLanguage = 'en' | 'zh-TW'
+
 export interface MqttapeBridge {
   connect(sessionId: MqttSessionId, config: ConnectionConfig): Promise<void>
   disconnect(sessionId: MqttSessionId): Promise<void>
@@ -242,6 +244,7 @@ export interface MqttapeBridge {
   getUpdateStatus(): Promise<AppUpdateStatus>
   checkForUpdates(): Promise<AppUpdateStatus>
   installUpdate(): Promise<boolean>
+  setInterfaceLanguage(language: InterfaceLanguage): void
   onStatus(listener: (sessionId: MqttSessionId, event: StatusEvent) => void): () => void
   onMessage(listener: (sessionId: MqttSessionId, message: MqttMessageRecord) => void): () => void
   onPacket(listener: (sessionId: MqttSessionId, event: MqttPacketEvent) => void): () => void

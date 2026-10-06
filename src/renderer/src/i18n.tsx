@@ -34,6 +34,8 @@ export function LanguageProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     document.documentElement.lang = language
+    // The desktop shell localizes its native menu and tray from this value.
+    window.mqttape?.setInterfaceLanguage(language)
   }, [language])
 
   const setLanguage = useCallback((nextLanguage: Language): void => {

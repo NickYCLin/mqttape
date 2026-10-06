@@ -1,10 +1,23 @@
-import { app, BrowserWindow, dialog, ipcMain, safeStorage, session, shell } from 'electron'
+import {
+  app,
+  BrowserWindow,
+  dialog,
+  ipcMain,
+  Menu,
+  nativeImage,
+  safeStorage,
+  session,
+  shell,
+  Tray
+} from 'electron'
 import { existsSync, readFileSync } from 'node:fs'
 import { writeFile } from 'node:fs/promises'
 import { join } from 'node:path'
 import type {
   CaptureFile,
   ConnectionConfig,
+  ConnectionState,
+  InterfaceLanguage,
   MqttSessionId,
   PublishRequest,
   SaveBrokerProfileRequest,
@@ -13,21 +26,35 @@ import type {
 } from '../shared/contracts'
 import { isCaptureFile } from '../shared/capture'
 import { mqttConnectionConfigError } from '../shared/connection-config'
+import {
+  buildApplicationMenuTemplate,
+  buildTrayMenuTemplate,
+  desktopLabel
+} from './desktop-menu'
 import { MqttService } from './mqtt-service'
 import { ProfileStore } from './profile-store'
 import { UpdateService } from './update-service'
 import { resolveUpdateSupport } from './update-support'
+import { WindowPreferenceStore } from './window-preferences'
 import {
   isLoRaWanDownlinkHistoryFile,
   type LoRaWanDownlinkHistoryFile
 } from '../shared/lorawan-downlink-history'
+import trayIconPath from '../../build/icon.png?asset'
+import trayIconWindowsPath from '../../build/icon.ico?asset'
 
 let mainWindow: BrowserWindow | null = null
 let updateService: UpdateService | null = null
+let windowPreferences: WindowPreferenceStore | null = null
+let tray: Tray | null = null
+let interfaceLanguage: InterfaceLanguage = 'zh-TW'
+let isQuitting = false
+let backgroundNoticeShown = false
 
 const MAX_MQTT_SESSIONS = 8
 const mqttServices = new Map<MqttSessionId, MqttService>()
 const selectedTlsFiles = new Set<string>()
+const sessionStates = new Map<MqttSessionId, ConnectionState>()
 
 function assertSessionId(sessionId: MqttSessionId): void {
   if (!/^[A-Za-z0-9_-]{1,128}$/.test(sessionId)) throw new Error('Invalid MQTT session identifier.')
@@ -41,7 +68,13 @@ function mqttServiceFor(sessionId: MqttSessionId): MqttService {
     throw new Error(`Up to ${MAX_MQTT_SESSIONS} MQTT sessions can be open at the same time.`)
   }
   const service = new MqttService(
-    (status) => mainWindow?.webContents.send('mqttape:status', sessionId, status),
+    (status) => {
+      if (mqttServices.get(sessionId) === service) {
+        sessionStates.set(sessionId, status.state)
+        refreshTrayMenu()
+      }
+      mainWindow?.webContents.send('mqttape:status', sessionId, status)
+    },
     (message) => mainWindow?.webContents.send('mqttape:message', sessionId, message),
     (event) => mainWindow?.webContents.send('mqttape:packet', sessionId, event)
   )
@@ -61,12 +94,15 @@ async function destroyMqttSession(sessionId: MqttSessionId): Promise<void> {
   const service = mqttServices.get(sessionId)
   if (!service) return
   mqttServices.delete(sessionId)
+  sessionStates.delete(sessionId)
+  refreshTrayMenu()
   await service.disconnect()
 }
 
 async function disconnectAllMqttSessions(): Promise<void> {
   const services = [...mqttServices.values()]
   mqttServices.clear()
+  sessionStates.clear()
   await Promise.all(services.map((service) => service.disconnect()))
 }
 
@@ -191,7 +227,118 @@ function registerIpcHandlers(profileStore: ProfileStore, updater: UpdateService)
   })
   ipcMain.handle('mqttape:get-update-status', () => updater.getStatus())
   ipcMain.handle('mqttape:check-for-updates', () => updater.checkForUpdates())
-  ipcMain.handle('mqttape:install-update', () => updater.installUpdate())
+  ipcMain.handle('mqttape:install-update', () => {
+    // The updater quits through window close events, which must not be
+    // redirected to the tray.
+    isQuitting = true
+    const installing = updater.installUpdate()
+    if (!installing) isQuitting = false
+    return installing
+  })
+  ipcMain.on('mqttape:set-interface-language', (_event, language: unknown) => {
+    if (language !== 'en' && language !== 'zh-TW') return
+    if (language === interfaceLanguage) return
+    interfaceLanguage = language
+    refreshApplicationMenu()
+    refreshTrayMenu()
+  })
+}
+
+function showMainWindow(): void {
+  if (!mainWindow) {
+    createWindow()
+    return
+  }
+  mainWindow.setSkipTaskbar(false)
+  if (mainWindow.isMinimized()) mainWindow.restore()
+  mainWindow.show()
+  mainWindow.focus()
+}
+
+function quitApplication(): void {
+  isQuitting = true
+  app.quit()
+}
+
+async function updateWindowPreferences(
+  changes: Parameters<WindowPreferenceStore['update']>[0]
+): Promise<void> {
+  if (!windowPreferences) return
+  try {
+    await windowPreferences.update(changes)
+  } catch (error) {
+    console.error('Failed to save MQTTape window preferences.', error)
+  }
+  refreshApplicationMenu()
+  refreshTrayMenu()
+}
+
+function trayPreferenceOptions() {
+  const preferences = windowPreferences?.value ?? { closeToTray: false, minimizeToTray: false }
+  return {
+    ...preferences,
+    onToggleCloseToTray: (enabled: boolean) => {
+      void updateWindowPreferences({ closeToTray: enabled })
+    },
+    onToggleMinimizeToTray: (enabled: boolean) => {
+      void updateWindowPreferences({ minimizeToTray: enabled })
+    }
+  }
+}
+
+function refreshApplicationMenu(): void {
+  Menu.setApplicationMenu(Menu.buildFromTemplate(buildApplicationMenuTemplate({
+    ...trayPreferenceOptions(),
+    language: interfaceLanguage,
+    platform: process.platform,
+    isDevelopment: !app.isPackaged,
+    trayAvailable: tray !== null,
+    onOpenExternal: (url) => void shell.openExternal(url)
+  })))
+}
+
+function refreshTrayMenu(): void {
+  if (!tray) return
+  const connectedSessions = [...sessionStates.values()]
+    .filter((state) => state === 'connected').length
+  tray.setToolTip(desktopLabel(interfaceLanguage, 'trayTooltip'))
+  tray.setContextMenu(Menu.buildFromTemplate(buildTrayMenuTemplate({
+    ...trayPreferenceOptions(),
+    language: interfaceLanguage,
+    connectedSessions,
+    onShow: showMainWindow,
+    onQuit: quitApplication
+  })))
+}
+
+function createTray(): void {
+  try {
+    const icon = process.platform === 'win32'
+      ? nativeImage.createFromPath(trayIconWindowsPath)
+      : nativeImage.createFromPath(trayIconPath).resize({ width: 16, height: 16 })
+    tray = new Tray(icon)
+  } catch (error) {
+    console.error('Failed to create the MQTTape tray icon.', error)
+    tray = null
+    return
+  }
+  // macOS opens the context menu on click; elsewhere a click restores the window.
+  if (process.platform !== 'darwin') tray.on('click', showMainWindow)
+  tray.on('double-click', showMainWindow)
+  refreshTrayMenu()
+}
+
+function hideToTray(): void {
+  if (!mainWindow) return
+  mainWindow.setSkipTaskbar(true)
+  mainWindow.hide()
+  if (backgroundNoticeShown || process.platform !== 'win32' || !tray) return
+  backgroundNoticeShown = true
+  tray.displayBalloon({
+    iconType: 'info',
+    title: desktopLabel(interfaceLanguage, 'backgroundTitle'),
+    content: desktopLabel(interfaceLanguage, 'backgroundBody')
+  })
 }
 
 function readLinuxPackageType(): string | undefined {
@@ -235,6 +382,20 @@ function createWindow(): void {
     void mainWindow.loadFile(join(__dirname, '../renderer/index.html'))
   }
 
+  mainWindow.on('close', (event) => {
+    if (isQuitting || !tray || !windowPreferences?.value.closeToTray) return
+    event.preventDefault()
+    hideToTray()
+  })
+  // Windows logoff and shutdown close windows without emitting before-quit.
+  mainWindow.on('query-session-end', () => {
+    isQuitting = true
+  })
+  mainWindow.on('minimize', () => {
+    if (!tray || !windowPreferences?.value.minimizeToTray) return
+    hideToTray()
+  })
+
   mainWindow.on('closed', () => {
     mainWindow = null
   })
@@ -245,12 +406,10 @@ if (!hasSingleInstanceLock) {
   app.quit()
 } else {
   app.on('second-instance', () => {
-    if (!mainWindow) return
-    if (mainWindow.isMinimized()) mainWindow.restore()
-    mainWindow.focus()
+    if (mainWindow) showMainWindow()
   })
 
-  app.whenReady().then(() => {
+  app.whenReady().then(async () => {
     session.defaultSession.setPermissionCheckHandler(() => false)
     session.defaultSession.setPermissionRequestHandler((_webContents, _permission, callback) => {
       callback(false)
@@ -273,13 +432,18 @@ if (!hasSingleInstanceLock) {
       }),
       (status) => mainWindow?.webContents.send('mqttape:update-status', status)
     )
+    windowPreferences = new WindowPreferenceStore(
+      join(app.getPath('userData'), 'window-preferences.json'),
+      process.platform
+    )
+    await windowPreferences.load()
     registerIpcHandlers(profileStore, updateService)
+    createTray()
+    refreshApplicationMenu()
     createWindow()
     updateService.start()
 
-    app.on('activate', () => {
-      if (BrowserWindow.getAllWindows().length === 0) createWindow()
-    })
+    app.on('activate', () => showMainWindow())
   })
 }
 
@@ -291,4 +455,12 @@ app.on('window-all-closed', () => {
   })
 })
 
-app.on('before-quit', () => updateService?.dispose())
+app.on('before-quit', () => {
+  isQuitting = true
+  updateService?.dispose()
+})
+
+app.on('will-quit', () => {
+  tray?.destroy()
+  tray = null
+})

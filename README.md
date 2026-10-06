@@ -76,6 +76,7 @@ MQTTape 保留早期 Chrome MQTT 工具即開即用的便利性，並加入可�
 | CBOR／Protobuf／Sparkplug B Viewer | 支援 | 支援 |
 | 多 Broker 同時連線 | 最多 8 個 | 最多 8 個 |
 | WebSocket 進階認證 | Basic／Bearer／Header／Query | Query Parameters |
+| 系統匣背景執行 | 支援 | 不支援 |
 
 瀏覽器無法開啟任意 TCP Socket，因此 Web Lite 的通訊協定選單只提供 WebSocket Transport。
 
@@ -88,6 +89,17 @@ Web Lite 發布於 <https://nickyclin.github.io/mqttape/>。由於 GitHub Pages 
 使用標題列下方的「新增 Broker」可以同時開啟最多 8 個工作階段。每個分頁都有自己的 MQTT Client、連線狀態、訂閱、訊息時間軸、QoS 封包流程、Topic 樹、Downlink 狀態與重播進度；切換分頁時，背景工作階段仍會維持連線並繼續收訊息，分頁上的數字會標示新增的未讀訊息。
 
 設定檔是全域共用的，因此可在任一分頁儲存後從其他分頁載入；載入同一個設定檔不代表共用 MQTT 連線，各分頁仍需使用不衝突的 Client ID。LoRaWAN Downlink 歷史會依設定檔或 Broker Endpoint 分開保存，避免不同環境的事件互相關聯。關閉工作階段時，MQTTape 會正常送出 MQTT `DISCONNECT` 並清除該分頁的執行期資料，因此不會把正常關閉誤判為需要發布 Last Will 的異常斷線。
+
+## 系統匣與背景執行
+
+桌面版會在系統匣（macOS 為選單列）放一個 MQTTape 圖示。Windows 與 macOS 預設關閉視窗後仍在背景執行，MQTT 連線、訂閱與擷取都不會中斷，適合長時間監控 `#` 之類的 Topic；點兩下圖示或從圖示選單選「顯示 MQTTape」即可回到畫面。要真正結束程式時，請從系統匣選單或「檔案」選單選「結束 MQTTape」。
+
+「檔案」選單（macOS 為「MQTTape」選單）與系統匣選單都能切換兩個選項：
+
+- **關閉視窗時在系統匣繼續執行**：Windows、macOS 預設開啟。Linux 預設關閉，因為部分桌面環境（例如未安裝 AppIndicator 擴充的 GNOME）不顯示系統匣圖示。
+- **最小化時隱藏到系統匣**：預設關閉；開啟後最小化也會從工作列移除。
+
+原生選單會跟著介面語言切換繁體中文或英文，並移除一般使用不需要的開發工具項目。
 
 ## WebSocket 進階認證
 
@@ -171,7 +183,7 @@ TLS 檔案必須使用 MQTTape 的檔案選擇器指定。Client Certificate 與
 
 ## 自動更新
 
-Windows x64 `Setup` 安裝版與支援的 Linux x64 套件會在啟動後及每六小時檢查 GitHub Releases。更新會在背景下載；準備完成後，可在標題列選擇「重新啟動以更新」。若正常關閉程式，已下載的更新也會在結束時套用。
+Windows x64 `Setup` 安裝版與支援的 Linux x64 套件會在啟動後及每六小時檢查 GitHub Releases。更新會在背景下載；準備完成後，可在標題列選擇「重新啟動以更新」。從選單選擇「結束 MQTTape」時，已下載的更新也會在結束時套用；若只是關閉視窗並保留在系統匣，更新會等到真正結束時才安裝。
 
 Windows Portable、所有 ARM64 套件與未簽章的 macOS Build 目前維持手動更新。ARM64 版標題列會明確顯示「ARM64・下載更新」，不會讀取 x64 的差分更新檔。若目前安裝的是導入自動更新之前的 Windows x64 版本，需要最後一次手動安裝新版 `Setup`；之後即可直接更新，不必先解除安裝。
 

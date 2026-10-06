@@ -3,6 +3,7 @@ import type {
   AppUpdateStatus,
   BrokerProfile,
   CaptureFile,
+  InterfaceLanguage,
   ConnectionConfig,
   MqttMessageRecord,
   MqttPacketEvent,
@@ -43,6 +44,8 @@ const bridge: MqttapeBridge = {
   checkForUpdates: (): Promise<AppUpdateStatus> =>
     ipcRenderer.invoke('mqttape:check-for-updates'),
   installUpdate: (): Promise<boolean> => ipcRenderer.invoke('mqttape:install-update'),
+  setInterfaceLanguage: (language: InterfaceLanguage) =>
+    ipcRenderer.send('mqttape:set-interface-language', language),
   onStatus: (listener: (sessionId: MqttSessionId, event: StatusEvent) => void) => {
     const wrapped = (
       _event: Electron.IpcRendererEvent,

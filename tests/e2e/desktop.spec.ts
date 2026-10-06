@@ -54,10 +54,14 @@ test('desktop shell starts with the restricted preload bridge', async () => {
       }
     })
     const window = await application.firstWindow()
+    const menuLabels = () => application!.evaluate(({ Menu }) =>
+      Menu.getApplicationMenu()?.items.map((item) => item.label) ?? []
+    )
     await expect(window).toHaveTitle('MQTTape')
     await expect(window.locator('html')).toHaveAttribute('lang', 'zh-TW')
     await expect(window.getByLabel('介面語言')).toHaveValue('zh-TW')
     await expect(window.getByTitle('桌面完整版')).toHaveText('桌面完整版')
+    await expect.poll(menuLabels).toEqual(expect.arrayContaining(['檔案', '編輯', '說明']))
     await expect(window.getByLabel('通訊協定')).toHaveValue('mqtt')
     await expect(window.getByLabel('連接埠')).toHaveValue('1883')
     await expect(window.getByLabel('已儲存的 Broker 設定檔').locator('option')).toHaveText([
@@ -73,6 +77,7 @@ test('desktop shell starts with the restricted preload bridge', async () => {
     await window.getByLabel('介面語言').selectOption('en')
     await expect(window.locator('html')).toHaveAttribute('lang', 'en')
     await expect(window.getByLabel('Interface language')).toHaveValue('en')
+    await expect.poll(menuLabels).toEqual(expect.arrayContaining(['File', 'Edit', 'Help']))
 
     const bridgeMethods = await window.evaluate(() => Object.keys(window.mqttape ?? {}).sort())
     expect(bridgeMethods).toEqual(expect.arrayContaining([
