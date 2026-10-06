@@ -72,7 +72,7 @@ MQTTape 保留早期 Chrome MQTT 工具即開即用的便利性，並加入可�
 | 本機擷取匯出／重播 | 支援 | 支援 |
 | 儲存連線設定檔 | 秘密會加密 | 不儲存秘密 |
 | 自訂 CA 與 mTLS | 支援 | 不支援 |
-| 應用程式自動更新 | 支援的安裝套件 | 由瀏覽器處理 |
+| 應用程式自動更新 | 支援（macOS 需放在「應用程式」資料夾） | 由瀏覽器處理 |
 | CBOR／Protobuf／Sparkplug B Viewer | 支援 | 支援 |
 | 多 Broker 同時連線 | 最多 8 個 | 最多 8 個 |
 | WebSocket 進階認證 | Basic／Bearer／Header／Query | Query Parameters |
@@ -146,12 +146,12 @@ ChirpStack:      application/<application-id>/device/+/event/+
 
 | 平台 | 支援架構 | 安裝包格式 | 更新機制 |
 |---|---|---|---|
-| **Windows** | x64 (Intel / AMD) | NSIS 安裝檔 (`Setup.exe`) / Portable 免安裝版 | 🟢 安裝版支援背景自動更新 / 免安裝版手動下載 |
-| **Windows** | ARM64 | NSIS 安裝檔 (`Setup.exe`) / Portable 免安裝版 | ⚪ 手動下載更新 |
-| **macOS 13+** | Apple Silicon (M 系列) | DMG 映像檔 (`.dmg`) / ZIP 壓縮檔 | ⚪ 手動下載更新 |
-| **macOS 13+** | Intel x64 | DMG 映像檔 (`.dmg`) / ZIP 壓縮檔 | ⚪ 手動下載更新 |
+| **Windows** | x64 (Intel / AMD) | NSIS 安裝檔 (`Setup.exe`) / Portable 免安裝版 | 🟢 支援背景自動更新 |
+| **Windows** | ARM64 | NSIS 安裝檔 (`Setup.exe`) / Portable 免安裝版 | 🟢 支援背景自動更新 |
+| **macOS 13+** | Apple Silicon (M 系列) | DMG 映像檔 (`.dmg`) / ZIP 壓縮檔 | 🟢 放在「應用程式」資料夾時支援自動更新 |
+| **macOS 13+** | Intel x64 | DMG 映像檔 (`.dmg`) / ZIP 壓縮檔 | 🟢 放在「應用程式」資料夾時支援自動更新 |
 | **Linux** | x64 (AMD64) | AppImage / Debian 套件 (`.deb`) | 🟢 支援背景自動更新 |
-| **Linux** | ARM64 (aarch64) | AppImage / Debian 套件 (`.deb`) | ⚪ 手動下載更新 |
+| **Linux** | ARM64 (aarch64) | AppImage / Debian 套件 (`.deb`) | 🟢 支援背景自動更新 |
 | **Web Lite** | 跨平台瀏覽器 | 靜態 Web 應用 ([線上使用](https://nickyclin.github.io/mqttape/)) | 🟢 瀏覽器即時載入最新版 |
 
 > [!TIP]
@@ -183,9 +183,15 @@ TLS 檔案必須使用 MQTTape 的檔案選擇器指定。Client Certificate 與
 
 ## 自動更新
 
-Windows x64 `Setup` 安裝版與支援的 Linux x64 套件會在啟動後及每六小時檢查 GitHub Releases。更新會在背景下載；準備完成後，可在標題列選擇「重新啟動以更新」。從選單選擇「結束 MQTTape」時，已下載的更新也會在結束時套用；若只是關閉視窗並保留在系統匣，更新會等到真正結束時才安裝。
+所有 GitHub Release 的桌面套件都會在啟動後及每六小時檢查 GitHub Releases。更新會在背景下載；準備完成後，可在標題列選擇「重新啟動以更新」。從選單選擇「結束 MQTTape」時，已下載的更新也會在結束時套用；若只是關閉視窗並保留在系統匣，更新會等到真正結束時才安裝。
 
-Windows Portable、所有 ARM64 套件與未簽章的 macOS Build 目前維持手動更新。ARM64 版標題列會明確顯示「ARM64・下載更新」，不會讀取 x64 的差分更新檔。若目前安裝的是導入自動更新之前的 Windows x64 版本，需要最後一次手動安裝新版 `Setup`；之後即可直接更新，不必先解除安裝。
+各種套件的更新方式：
+
+- **Windows Setup、Linux AppImage／deb**：使用 `electron-updater`。ARM64 讀取各自的 `latest-arm64.yml`、`latest-linux-arm64.yml`，不會拿到 x64 套件。
+- **Windows Portable**：下載新版 Portable 執行檔，以 Release 內的 `SHA256SUMS.txt` 驗證後，在 MQTTape 結束時直接覆蓋原本的 `.exe`，所以捷徑與釘選位置都不用改。檔名裡的版本號不會跟著變。
+- **macOS**：因為還沒有 Apple Developer ID 簽章，無法使用系統內建的更新機制。MQTTape 會下載新版 ZIP、驗證 SHA-256 並解壓縮，結束時替換 `MQTTape.app` 再重新開啟。App 必須放在可寫入的位置（例如「應用程式」資料夾）；直接從 DMG 執行或被 macOS 隔離轉移（App Translocation）時，標題列會提示移到「應用程式」資料夾並改為手動下載。
+
+v0.14.0 以前的 Portable、ARM64 與 macOS 版本還沒有這些更新程式，需要最後一次手動下載新版。Setup 安裝版直接執行新版 `Setup` 即可覆蓋安裝，不必先解除安裝。
 
 Microsoft Store MSIX 由 Store 管理更新，不會啟動 MQTTape 的 GitHub Release 更新程式。
 

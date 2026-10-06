@@ -108,4 +108,33 @@ describe('UpdateService', () => {
       reason: 'portable'
     })
   })
+
+  it('pins ARM64 Setup builds to their own feed without allowing downgrades', () => {
+    const updater = createUpdater()
+    const service = new UpdateService(
+      '0.14.0',
+      { mode: 'automatic' },
+      () => undefined,
+      () => updater,
+      'latest-arm64'
+    )
+    service.start()
+    expect(updater.channel).toBe('latest-arm64')
+    expect(updater.allowDowngrade).toBe(false)
+    service.dispose()
+  })
+
+  it('applies a downloaded update when the app quits', () => {
+    const installOnQuit = vi.fn()
+    const updater = Object.assign(createUpdater(), { installOnQuit })
+    const service = new UpdateService('0.14.0', { mode: 'automatic' }, () => undefined, () => updater)
+    service.start()
+    service.prepareForQuit()
+    expect(installOnQuit).not.toHaveBeenCalled()
+
+    updater.emit('update-downloaded', { version: '0.15.0' } as UpdateDownloadedEvent)
+    service.prepareForQuit()
+    expect(installOnQuit).toHaveBeenCalledOnce()
+    service.dispose()
+  })
 })

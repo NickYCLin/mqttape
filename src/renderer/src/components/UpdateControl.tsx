@@ -32,8 +32,8 @@ export function UpdateControl() {
   if (status.mode === 'manual') {
     const labelKey = status.reason === 'portable'
       ? 'update.manualPortable'
-      : status.reason === 'unsupported-architecture'
-        ? 'update.manualArchitecture'
+      : status.reason === 'read-only-location'
+        ? 'update.manualReadOnly'
         : 'update.manual'
     return (
       <a

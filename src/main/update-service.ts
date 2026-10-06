@@ -5,14 +5,36 @@ import type { UpdateSupport } from './update-support'
 const INITIAL_CHECK_DELAY_MS = 10_000
 const CHECK_INTERVAL_MS = 6 * 60 * 60 * 1_000
 
-function getAutoUpdater(): AppUpdater {
-  const { autoUpdater } = electronUpdater
+// The members UpdateService uses, shared by electron-updater and
+// PackageReplacementUpdater.
+export interface UpdateEngine {
+  autoDownload: boolean
+  autoInstallOnAppQuit: boolean
+  autoRunAppAfterInstall: boolean
+  allowPrerelease: boolean
+  allowDowngrade?: boolean
+  disableWebInstaller: boolean
+  channel?: string | null
+  on(event: 'checking-for-update' | 'update-not-available', listener: () => void): unknown
+  on(
+    event: 'update-available' | 'update-downloaded',
+    listener: (info: { version: string }) => void
+  ): unknown
+  on(event: 'download-progress', listener: (progress: { percent: number }) => void): unknown
+  on(event: 'error', listener: (error: Error) => void): unknown
+  checkForUpdates(): Promise<unknown>
+  quitAndInstall(isSilent?: boolean, isForceRunAfter?: boolean): void
+  installOnQuit?(): void
+}
+
+function getAutoUpdater(): UpdateEngine {
+  const { autoUpdater }: { autoUpdater: AppUpdater } = electronUpdater
   return autoUpdater
 }
 
 export class UpdateService {
   private status: AppUpdateStatus
-  private updater: AppUpdater | null = null
+  private updater: UpdateEngine | null = null
   private initialCheckTimer: ReturnType<typeof setTimeout> | null = null
   private intervalTimer: ReturnType<typeof setInterval> | null = null
   private checkInProgress = false
@@ -21,7 +43,8 @@ export class UpdateService {
     currentVersion: string,
     support: UpdateSupport,
     private readonly onStatus: (status: AppUpdateStatus) => void,
-    private readonly updaterFactory: () => AppUpdater = getAutoUpdater
+    private readonly updaterFactory: () => UpdateEngine = getAutoUpdater,
+    private readonly channel?: string
   ) {
     this.status = {
       mode: support.mode,
@@ -41,6 +64,11 @@ export class UpdateService {
     updater.autoRunAppAfterInstall = true
     updater.allowPrerelease = false
     updater.disableWebInstaller = true
+    if (this.channel) {
+      updater.channel = this.channel
+      // Setting a channel enables downgrades in electron-updater.
+      updater.allowDowngrade = false
+    }
 
     updater.on('checking-for-update', () => {
       this.setStatus({ state: 'checking', progress: undefined })
@@ -95,6 +123,10 @@ export class UpdateService {
     if (!this.updater || this.status.state !== 'downloaded') return false
     this.updater.quitAndInstall(false, true)
     return true
+  }
+
+  prepareForQuit(): void {
+    if (this.status.state === 'downloaded') this.updater?.installOnQuit?.()
   }
 
   dispose(): void {

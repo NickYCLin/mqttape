@@ -6,13 +6,33 @@ export interface UpdateEnvironment {
   arch: NodeJS.Architecture
   windowsStore?: boolean
   portableExecutableDirectory?: string
+  portableExecutableFile?: string
   appImagePath?: string
   linuxPackageType?: string
+  macBundlePath?: string
+  macBundleWritable?: boolean
 }
+
+export type ReplacementTarget =
+  | { kind: 'windows-portable'; arch: 'x64' | 'arm64'; executablePath: string }
+  | { kind: 'macos-bundle'; arch: 'x64' | 'arm64'; bundlePath: string }
 
 export interface UpdateSupport {
   mode: UpdateMode
   reason?: UpdateSupportReason
+  // electron-updater reads `latest.yml` for both Windows architectures unless
+  // the channel is set; ARM64 Setup builds publish `latest-arm64.yml`.
+  channel?: string
+  // Packages electron-updater cannot handle (portable executables and unsigned
+  // macOS bundles) are updated by replacing the package file itself.
+  replacement?: ReplacementTarget
+}
+
+export const WINDOWS_ARM64_UPDATE_CHANNEL = 'latest-arm64'
+
+function isMacBundleLocationUpdatable(bundlePath: string): boolean {
+  // Gatekeeper App Translocation and mounted disk images are read-only copies.
+  return !bundlePath.includes('/AppTranslocation/') && !bundlePath.startsWith('/Volumes/')
 }
 
 export function resolveUpdateSupport(environment: UpdateEnvironment): UpdateSupport {
@@ -24,27 +44,36 @@ export function resolveUpdateSupport(environment: UpdateEnvironment): UpdateSupp
     return { mode: 'disabled', reason: 'microsoft-store' }
   }
 
-  // macOS builds are unsigned on every architecture, and that is the reason
-  // users should see; the architecture check below would otherwise shadow it
-  // on Apple Silicon.
-  if (environment.platform === 'darwin') {
-    return { mode: 'manual', reason: 'unsigned-macos' }
-  }
+  const { arch } = environment
+  if (arch !== 'x64' && arch !== 'arm64') return { mode: 'manual', reason: 'unsupported-package' }
 
-  // Release metadata currently points at the x64 differential packages. ARM64
-  // builds stay on explicit downloads until per-architecture feeds are split.
-  if (environment.arch === 'arm64') {
-    return { mode: 'manual', reason: 'unsupported-architecture' }
+  if (environment.platform === 'darwin') {
+    const bundlePath = environment.macBundlePath
+    if (!bundlePath || !isMacBundleLocationUpdatable(bundlePath) || !environment.macBundleWritable) {
+      return { mode: 'manual', reason: 'read-only-location' }
+    }
+    return { mode: 'automatic', replacement: { kind: 'macos-bundle', arch, bundlePath } }
   }
-  if (environment.arch !== 'x64') return { mode: 'manual', reason: 'unsupported-package' }
 
   if (environment.platform === 'win32') {
-    return environment.portableExecutableDirectory
-      ? { mode: 'manual', reason: 'portable' }
+    if (environment.portableExecutableFile) {
+      return {
+        mode: 'automatic',
+        replacement: {
+          kind: 'windows-portable',
+          arch,
+          executablePath: environment.portableExecutableFile
+        }
+      }
+    }
+    if (environment.portableExecutableDirectory) return { mode: 'manual', reason: 'portable' }
+    return arch === 'arm64'
+      ? { mode: 'automatic', channel: WINDOWS_ARM64_UPDATE_CHANNEL }
       : { mode: 'automatic' }
   }
 
   if (environment.platform === 'linux') {
+    // electron-updater already reads `latest-linux-arm64.yml` on ARM64.
     if (environment.appImagePath || environment.linuxPackageType === 'deb') {
       return { mode: 'automatic' }
     }

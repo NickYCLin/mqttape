@@ -206,8 +206,7 @@ export type UpdateSupportReason =
   | 'development'
   | 'microsoft-store'
   | 'portable'
-  | 'unsupported-architecture'
-  | 'unsigned-macos'
+  | 'read-only-location'
   | 'unsupported-package'
 
 export interface AppUpdateStatus {

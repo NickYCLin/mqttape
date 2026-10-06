@@ -5,14 +5,15 @@ import {
   ipcMain,
   Menu,
   nativeImage,
+  net,
   safeStorage,
   session,
   shell,
   Tray
 } from 'electron'
-import { existsSync, readFileSync } from 'node:fs'
+import { accessSync, constants as fsConstants, existsSync, readFileSync } from 'node:fs'
 import { writeFile } from 'node:fs/promises'
-import { join } from 'node:path'
+import { dirname, join, resolve } from 'node:path'
 import type {
   CaptureFile,
   ConnectionConfig,
@@ -33,8 +34,9 @@ import {
 } from './desktop-menu'
 import { MqttService } from './mqtt-service'
 import { ProfileStore } from './profile-store'
+import { PackageReplacementUpdater } from './package-replacement-updater'
 import { UpdateService } from './update-service'
-import { resolveUpdateSupport } from './update-support'
+import { resolveUpdateSupport, type UpdateSupport } from './update-support'
 import { WindowPreferenceStore } from './window-preferences'
 import {
   isLoRaWanDownlinkHistoryFile,
@@ -352,6 +354,39 @@ function readLinuxPackageType(): string | undefined {
   }
 }
 
+function macBundleLocation(): { macBundlePath?: string, macBundleWritable?: boolean } {
+  if (process.platform !== 'darwin') return {}
+  // Contents/MacOS/MQTTape -> MQTTape.app
+  const bundlePath = resolve(process.execPath, '..', '..', '..')
+  if (!bundlePath.endsWith('.app')) return {}
+  try {
+    accessSync(dirname(bundlePath), fsConstants.W_OK)
+    accessSync(bundlePath, fsConstants.W_OK)
+    return { macBundlePath: bundlePath, macBundleWritable: true }
+  } catch {
+    return { macBundlePath: bundlePath, macBundleWritable: false }
+  }
+}
+
+function createUpdateService(support: UpdateSupport): UpdateService {
+  const replacement = support.replacement
+  return new UpdateService(
+    app.getVersion(),
+    support,
+    (status) => mainWindow?.webContents.send('mqttape:update-status', status),
+    replacement
+      ? () => new PackageReplacementUpdater({
+          currentVersion: app.getVersion(),
+          target: replacement,
+          stagingDirectory: join(app.getPath('temp'), 'mqttape-update'),
+          fetch: (input, init) => net.fetch(input, init),
+          quit: quitApplication
+        })
+      : undefined,
+    support.channel
+  )
+}
+
 function createWindow(): void {
   mainWindow = new BrowserWindow({
     width: 1440,
@@ -419,19 +454,17 @@ if (!hasSingleInstanceLock) {
       encrypt: (value) => safeStorage.encryptString(value),
       decrypt: (value) => safeStorage.decryptString(value)
     })
-    updateService = new UpdateService(
-      app.getVersion(),
-      resolveUpdateSupport({
-        isPackaged: app.isPackaged,
-        platform: process.platform,
-        arch: process.arch,
-        windowsStore: process.windowsStore,
-        portableExecutableDirectory: process.env.PORTABLE_EXECUTABLE_DIR,
-        appImagePath: process.env.APPIMAGE,
-        linuxPackageType: readLinuxPackageType()
-      }),
-      (status) => mainWindow?.webContents.send('mqttape:update-status', status)
-    )
+    updateService = createUpdateService(resolveUpdateSupport({
+      isPackaged: app.isPackaged,
+      platform: process.platform,
+      arch: process.arch,
+      windowsStore: process.windowsStore,
+      portableExecutableDirectory: process.env.PORTABLE_EXECUTABLE_DIR,
+      portableExecutableFile: process.env.PORTABLE_EXECUTABLE_FILE,
+      appImagePath: process.env.APPIMAGE,
+      linuxPackageType: readLinuxPackageType(),
+      ...macBundleLocation()
+    }))
     windowPreferences = new WindowPreferenceStore(
       join(app.getPath('userData'), 'window-preferences.json'),
       process.platform
@@ -457,6 +490,7 @@ app.on('window-all-closed', () => {
 
 app.on('before-quit', () => {
   isQuitting = true
+  updateService?.prepareForQuit()
   updateService?.dispose()
 })
 

@@ -21,7 +21,7 @@ jobs:
           - runner: windows-11-arm
             target: win-arm64
             args: --win --arm64
-            updater_metadata: false
+            updater_metadata: true
           - runner: macos-15-intel
             target: mac-x64
             args: --mac --x64
@@ -37,7 +37,7 @@ jobs:
           - runner: ubuntu-24.04-arm
             target: linux-arm64
             args: --linux --arm64
-            updater_metadata: false
+            updater_metadata: true
     runs-on: ${{ matrix.runner }}
     steps:
       - name: Checkout
@@ -53,6 +53,31 @@ jobs:
         run: npm run build
       - name: Package ${{ matrix.target }}
         run: npx electron-builder ${{ matrix.args }} --publish never
+      - name: Separate Windows ARM64 update metadata
+        if: matrix.target == 'win-arm64'
+        shell: pwsh
+        run: |
+          # electron-builder writes latest.yml for every Windows architecture;
+          # ARM64 builds read latest-arm64.yml so they never get the x64 Setup.
+          Move-Item -LiteralPath release/latest.yml -Destination release/latest-arm64.yml
+      - name: Validate update metadata
+        if: matrix.updater_metadata
+        shell: bash
+        run: |
+          set -euo pipefail
+          case '${{ matrix.target }}' in
+            win-x64) expected=latest.yml ;;
+            win-arm64) expected=latest-arm64.yml ;;
+            linux-x64) expected=latest-linux.yml ;;
+            linux-arm64) expected=latest-linux-arm64.yml ;;
+          esac
+          actual="$(cd release && ls latest*.yml)"
+          [[ "$actual" == "$expected" ]] || { echo "Expected $expected, found: $actual" >&2; exit 1; }
+          if [[ '${{ matrix.target }}' == *-arm64 ]]; then
+            grep -q 'arm64' "release/$expected" || { echo "$expected does not point at ARM64 packages" >&2; exit 1; }
+          else
+            ! grep -q 'arm64' "release/$expected" || { echo "$expected points at ARM64 packages" >&2; exit 1; }
+          fi
       - name: Validate Windows packages
         if: runner.os == 'Windows'
         shell: pwsh
@@ -150,7 +175,7 @@ jobs:
             release/*.deb
           if-no-files-found: error
           retention-days: 7
-      - name: Upload x64 update metadata
+      - name: Upload update metadata
         if: matrix.updater_metadata
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
         with:
@@ -216,12 +241,12 @@ jobs:
 
           | 平台 | 架構 | 檔案格式 | 更新支援 |
           |---|---|---|---|
-          | **Windows** | x64 | NSIS 安裝檔 (`Setup.exe`) / Portable 免安裝版 | 🟢 安裝版支援背景自動更新 |
-          | **Windows** | ARM64 | NSIS 安裝檔 (`Setup.exe`) / Portable 免安裝版 | ⚪ 手動下載更新 |
-          | **macOS 13+** | Apple Silicon | DMG 映像檔 (`.dmg`) / ZIP 壓縮檔 | ⚪ 手動下載更新 |
-          | **macOS 13+** | Intel x64 | DMG 映像檔 (`.dmg`) / ZIP 壓縮檔 | ⚪ 手動下載更新 |
+          | **Windows** | x64 | NSIS 安裝檔 (`Setup.exe`) / Portable 免安裝版 | 🟢 支援背景自動更新 |
+          | **Windows** | ARM64 | NSIS 安裝檔 (`Setup.exe`) / Portable 免安裝版 | 🟢 支援背景自動更新 |
+          | **macOS 13+** | Apple Silicon | DMG 映像檔 (`.dmg`) / ZIP 壓縮檔 | 🟢 放在「應用程式」資料夾時支援自動更新 |
+          | **macOS 13+** | Intel x64 | DMG 映像檔 (`.dmg`) / ZIP 壓縮檔 | 🟢 放在「應用程式」資料夾時支援自動更新 |
           | **Linux** | x64 (AMD64) | AppImage / Debian 套件 (`.deb`) | 🟢 支援背景自動更新 |
-          | **Linux** | ARM64 | AppImage / Debian 套件 (`.deb`) | ⚪ 手動下載更新 |
+          | **Linux** | ARM64 | AppImage / Debian 套件 (`.deb`) | 🟢 支援背景自動更新 |
           | **Web Lite** | 瀏覽器 | [線上即開即用](https://nickyclin.github.io/mqttape/) | 🟢 瀏覽器載入已部署版本 |
 
           ## 🛡️ 完整性與簽章狀態

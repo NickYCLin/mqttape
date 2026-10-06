@@ -30,12 +30,26 @@ describe('resolveUpdateSupport', () => {
     })).toEqual({ mode: 'disabled', reason: 'microsoft-store' })
   })
 
-  it('keeps the Windows portable build on manual downloads', () => {
+  it('replaces the Windows portable executable in place', () => {
+    expect(resolveUpdateSupport({
+      isPackaged: true,
+      platform: 'win32',
+      arch: 'arm64',
+      portableExecutableDirectory: 'C:\\Tools',
+      portableExecutableFile: 'C:\\Tools\\MQTTape.exe'
+    })).toEqual({
+      mode: 'automatic',
+      replacement: {
+        kind: 'windows-portable',
+        arch: 'arm64',
+        executablePath: 'C:\\Tools\\MQTTape.exe'
+      }
+    })
     expect(resolveUpdateSupport({
       isPackaged: true,
       platform: 'win32',
       arch: 'x64',
-      portableExecutableDirectory: 'C:\\Tools\\MQTTape'
+      portableExecutableDirectory: 'C:\\Tools'
     })).toEqual({ mode: 'manual', reason: 'portable' })
   })
 
@@ -54,33 +68,57 @@ describe('resolveUpdateSupport', () => {
     })).toEqual({ mode: 'automatic' })
   })
 
-  it('keeps unsigned macOS and unsupported packages on manual downloads', () => {
-    expect(resolveUpdateSupport({ isPackaged: true, platform: 'darwin', arch: 'x64' })).toEqual({
-      mode: 'manual',
-      reason: 'unsigned-macos'
+  it('replaces writable macOS bundles and leaves read-only copies manual', () => {
+    expect(resolveUpdateSupport({
+      isPackaged: true,
+      platform: 'darwin',
+      arch: 'arm64',
+      macBundlePath: '/Applications/MQTTape.app',
+      macBundleWritable: true
+    })).toEqual({
+      mode: 'automatic',
+      replacement: { kind: 'macos-bundle', arch: 'arm64', bundlePath: '/Applications/MQTTape.app' }
     })
-    expect(resolveUpdateSupport({ isPackaged: true, platform: 'darwin', arch: 'arm64' })).toEqual({
-      mode: 'manual',
-      reason: 'unsigned-macos'
-    })
-    expect(resolveUpdateSupport({ isPackaged: true, platform: 'freebsd', arch: 'x64' })).toEqual({
-      mode: 'manual',
-      reason: 'unsupported-package'
-    })
+    for (const macBundlePath of [
+      '/Volumes/MQTTape 0.14.0/MQTTape.app',
+      '/private/var/folders/x/AppTranslocation/1234/d/MQTTape.app'
+    ]) {
+      expect(resolveUpdateSupport({
+        isPackaged: true,
+        platform: 'darwin',
+        arch: 'x64',
+        macBundlePath,
+        macBundleWritable: true
+      })).toEqual({ mode: 'manual', reason: 'read-only-location' })
+    }
+    expect(resolveUpdateSupport({
+      isPackaged: true,
+      platform: 'darwin',
+      arch: 'x64',
+      macBundlePath: '/Applications/MQTTape.app',
+      macBundleWritable: false
+    })).toEqual({ mode: 'manual', reason: 'read-only-location' })
   })
 
-  it('keeps ARM64 packages on architecture-specific manual downloads', () => {
+  it('uses architecture-specific feeds for ARM64 installers', () => {
     expect(resolveUpdateSupport({
       isPackaged: true,
       platform: 'win32',
       arch: 'arm64'
-    })).toEqual({ mode: 'manual', reason: 'unsupported-architecture' })
+    })).toEqual({ mode: 'automatic', channel: 'latest-arm64' })
     expect(resolveUpdateSupport({
       isPackaged: true,
       platform: 'linux',
       arch: 'arm64',
       appImagePath: '/opt/MQTTape-arm64.AppImage'
-    })).toEqual({ mode: 'manual', reason: 'unsupported-architecture' })
+    })).toEqual({ mode: 'automatic' })
+  })
+
+  it('keeps unsupported platforms and architectures on manual downloads', () => {
+    expect(resolveUpdateSupport({ isPackaged: true, platform: 'freebsd', arch: 'x64' })).toEqual({
+      mode: 'manual',
+      reason: 'unsupported-package'
+    })
     expect(resolveUpdateSupport({
       isPackaged: true,
       platform: 'win32',

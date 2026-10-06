@@ -66,13 +66,13 @@ MQTTape 為三大作業系統與兩大主流 CPU 架構提供原生編譯的二�
 | 作業系統 | CPU 架構 | 檔案格式 | 檔案名稱模式 | 更新機制 |
 |---|---|---|---|---|
 | **Windows** | x64 (Intel/AMD) | NSIS 安裝檔 (`.exe`) | `MQTTape-Setup-<version>-x64.exe` | 🟢 支援背景自動更新 |
-| **Windows** | x64 (Intel/AMD) | Portable 免安裝 (`.exe`) | `MQTTape-<version>-portable-x64.exe` | ⚪ 手動下載更新 |
-| **Windows** | ARM64 | NSIS 安裝檔 (`.exe`) | `MQTTape-Setup-<version>-arm64.exe` | ⚪ 手動下載更新 |
-| **Windows** | ARM64 | Portable 免安裝 (`.exe`) | `MQTTape-<version>-portable-arm64.exe` | ⚪ 手動下載更新 |
-| **macOS 13+** | Apple Silicon (M 系列) | DMG 映像檔 (`.dmg`) / ZIP | `MQTTape-<version>-mac-arm64.dmg` | ⚪ 手動下載更新 |
-| **macOS 13+** | Intel x64 | DMG 映像檔 (`.dmg`) / ZIP | `MQTTape-<version>-mac-x64.dmg` | ⚪ 手動下載更新 |
+| **Windows** | x64 (Intel/AMD) | Portable 免安裝 (`.exe`) | `MQTTape-<version>-portable-x64.exe` | 🟢 結束時替換執行檔 |
+| **Windows** | ARM64 | NSIS 安裝檔 (`.exe`) | `MQTTape-Setup-<version>-arm64.exe` | 🟢 支援背景自動更新 |
+| **Windows** | ARM64 | Portable 免安裝 (`.exe`) | `MQTTape-<version>-portable-arm64.exe` | 🟢 結束時替換執行檔 |
+| **macOS 13+** | Apple Silicon (M 系列) | DMG 映像檔 (`.dmg`) / ZIP | `MQTTape-<version>-mac-arm64.dmg` | 🟢 結束時替換 App（需可寫入位置） |
+| **macOS 13+** | Intel x64 | DMG 映像檔 (`.dmg`) / ZIP | `MQTTape-<version>-mac-x64.dmg` | 🟢 結束時替換 App（需可寫入位置） |
 | **Linux** | x64 (AMD64) | AppImage / Debian 套件 (`.deb`) | `MQTTape-<version>-linux-x86_64.AppImage` / `MQTTape-<version>-linux-amd64.deb` | 🟢 支援背景自動更新 |
-| **Linux** | ARM64 (aarch64) | AppImage / Debian 套件 (`.deb`) | `MQTTape-<version>-linux-arm64.AppImage` | ⚪ 手動下載更新 |
+| **Linux** | ARM64 (aarch64) | AppImage / Debian 套件 (`.deb`) | `MQTTape-<version>-linux-arm64.AppImage` | 🟢 支援背景自動更新 |
 | **Web Lite** | 跨平台網頁 | 靜態 Web 應用 | [線上即開即用](https://nickyclin.github.io/mqttape/) | 🟢 瀏覽器即時載入最新版 |
 
 ---
@@ -97,9 +97,10 @@ Windows App Certification Kit（WACK）已 deprecated 且不再維護，只能�
 - 在 SignPath 申請核准與簽章流程完成前發布之 Windows 套件暫未簽章；請使用者在下載後透過 Release 提供的 `SHA256SUMS.txt` 進行完整性比對。
 - macOS 套件目前尚未加入 Apple Developer ID 簽名與公證 (Notarization)。
 
-### 2. 自動更新策略 (`electron-updater`)
-- **Windows x64 Setup** 與 **Linux x64** 套件內建 `electron-updater`，會在應用程式啟動時及每隔 6 小時主動查詢 GitHub Releases 的差分更新中繼資料（`latest.yml` / `latest-linux.yml`），下載完成後可一鍵重新啟動更新。
-- **ARM64 與 Portable 版本**：為避免共用 x64 差分資料導致架構錯亂，ARM64 版本於介面標題列提供「ARM64・下載更新」引導手動下載，待獨立更新 Feed 建立後另行啟用自動換版。
+### 2. 自動更新策略
+- **Windows Setup** 與 **Linux AppImage／deb** 使用 `electron-updater`，啟動時及每 6 小時查詢 GitHub Releases 的更新中繼資料，下載完成後可一鍵重新啟動更新。
+- 各架構使用獨立的中繼資料：`latest.yml`（Windows x64）、`latest-arm64.yml`（Windows ARM64）、`latest-linux.yml`（Linux x64）、`latest-linux-arm64.yml`（Linux ARM64）。electron-builder 在 Windows ARM64 也會輸出 `latest.yml`，Release workflow 會先改名並檢查內容只指向對應架構的套件。
+- **Windows Portable** 與 **macOS** 不支援 `electron-updater`（macOS 內建更新需要 Developer ID 簽章），改由 `PackageReplacementUpdater` 從最新 Release 下載對應的 Portable `.exe` 或 Mac ZIP，依 `SHA256SUMS.txt` 驗證後，在程式結束時以背景腳本替換原本的檔案或 `MQTTape.app`。因此 Release 必須保留這些檔名格式與 `SHA256SUMS.txt`。
 - **Microsoft Store MSIX**：偵測到 Store 執行環境後停用 `electron-updater`，由 Microsoft Store 派送對應架構的更新。
 
 ### 3. SHA-256 完整性校驗
