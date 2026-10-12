@@ -191,7 +191,7 @@ TLS 檔案必須使用 MQTTape 的檔案選擇器指定。Client Certificate 與
 - **Windows Portable**：下載新版 Portable 執行檔，以 Release 內的 `SHA256SUMS.txt` 驗證後，在 MQTTape 結束時直接覆蓋原本的 `.exe`，所以捷徑與釘選位置都不用改。檔名裡的版本號不會跟著變。
 - **macOS**：因為還沒有 Apple Developer ID 簽章，無法使用系統內建的更新機制。MQTTape 會下載新版 ZIP、驗證 SHA-256 並解壓縮，結束時替換 `MQTTape.app` 再重新開啟。App 必須放在可寫入的位置（例如「應用程式」資料夾）；直接從 DMG 執行或被 macOS 隔離轉移（App Translocation）時，標題列會提示移到「應用程式」資料夾並改為手動下載。
 
-v0.14.0 以前的 Portable、ARM64 與 macOS 版本還沒有這些更新程式，需要最後一次手動下載新版。Setup 安裝版直接執行新版 `Setup` 即可覆蓋安裝，不必先解除安裝。
+v0.15.0 之前的 Portable、ARM64 與 macOS 版本還沒有這些更新程式，需要最後一次手動下載新版。Setup 安裝版直接執行新版 `Setup` 即可覆蓋安裝，不必先解除安裝。
 
 Microsoft Store MSIX 由 Store 管理更新，不會啟動 MQTTape 的 GitHub Release 更新程式。
 
