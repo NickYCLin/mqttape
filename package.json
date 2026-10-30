@@ -35,7 +35,7 @@
     "buffer": "^6.0.3",
     "cbor-x": "^1.6.8",
     "electron-updater": "^6.8.11",
-    "mqtt": "^5.16.0",
+    "mqtt": "^5.16.1",
     "protobufjs": "^8.8.1",
     "react": "^19.3.1",
     "react-dom": "^19.3.1"
